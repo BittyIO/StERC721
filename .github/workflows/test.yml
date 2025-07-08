@@ -16,9 +16,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
+      - run: npm ci
+      
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          toolchain: nightly
+          toolchain-version: 2025-07-08
+          toolchain-channel: nightly
+          toolchain-install-dir: .foundry/toolchains/nightly-2025-07-08
 
       - name: Show Forge version
         run: |
