@@ -17,7 +17,7 @@ import {IStERC721} from "./interfaces/IStERC721.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
 
-abstract contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC721EnumerableUpgradeable {
+contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC721EnumerableUpgradeable {
     using Clones for address;
 
     IERC721Metadata private _erc721;
@@ -112,14 +112,16 @@ abstract contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgr
         external
         override
         nonReentrant
+        returns (bytes32[] memory delegationHashes)
     {
         address tokenOwner_;
         uint256 tokenId_;
+        delegationHashes = new bytes32[](tokenIds_.length);
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             tokenOwner_ = ownerOf(tokenId_);
             require(msg.sender == tokenOwner_, "sterc721: only owner can delegate");
-            assetVaultRegistry.create(tokenOwner_).setDelegateCashV2(
+            delegationHashes[i] = assetVaultRegistry.create(tokenOwner_).setDelegateCashV2(
                 delegate_, address(_erc721), tokenId_, rights_, value_
             );
         }

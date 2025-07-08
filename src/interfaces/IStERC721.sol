@@ -22,7 +22,9 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
 
     function underlyingAsset() external view returns (address);
 
-    function setDelegateCashV2(address delegate, uint256[] calldata tokenIds, bytes32 rights, bool value) external;
+    function setDelegateCashV2(address delegate, uint256[] calldata tokenIds, bytes32 rights, bool value)
+        external
+        returns (bytes32[] memory);
 
     function getDelegateCashForTokenV2(uint256[] calldata tokenIds_) external view returns (address[][] memory);
 
