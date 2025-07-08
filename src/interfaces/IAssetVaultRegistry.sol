@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.23;
+
+import {IAssetVault} from "./IAssetVault.sol";
+
+interface IAssetVaultRegistry {
+    function create(address owner_) external returns (IAssetVault assetVault);
+    function get(address owner_) external view returns (IAssetVault assetVault);
+}
