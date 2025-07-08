@@ -32,6 +32,9 @@ jobs:
           toolchain-channel: nightly
           toolchain-install-dir: .foundry/toolchains/nightly-2025-07-08
 
+      - name: Install forge-std
+        run: forge install foundry-rs/forge-std
+
       - name: Show Forge version
         run: |
           forge --version
