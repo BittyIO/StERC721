@@ -10,7 +10,7 @@ env:
 
 jobs:
   check:
-    name: Foundry project
+    name: Compile and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,11 +26,6 @@ jobs:
       
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-        with:
-          toolchain: nightly
-          toolchain-version: 2025-07-08
-          toolchain-channel: nightly
-          toolchain-install-dir: .foundry/toolchains/nightly-2025-07-08
 
       - name: Install forge-std
         run: forge install foundry-rs/forge-std
