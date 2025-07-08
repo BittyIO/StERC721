@@ -9,7 +9,6 @@ import {MintableERC721} from "./mock/MintableERC721.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IDelegateRegistryV2} from "../src/interfaces/IDelegateRegistryV2.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-
 contract StERC721Test is Test {
     using Strings for uint256;
 
@@ -37,6 +36,7 @@ contract StERC721Test is Test {
 
         stERC721 = new StERC721();
         stERC721.initialize(mockERC721, registry, "Staked ERC721", "stERC721");
+        registry.authorize(address(stERC721));
 
         vm.stopPrank();
     }

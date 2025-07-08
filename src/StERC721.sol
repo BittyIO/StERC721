@@ -50,7 +50,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external view override returns (bytes4) {
-        require(msg.sender == address(_erc721), "Sterc721: erc721 not acceptable");
+        require(msg.sender == address(_erc721), "StERC721: erc721 not acceptable");
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -69,9 +69,9 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         address staker_ = msg.sender;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
-            require(staker_ == ownerOf(tokenId_), "sterc721: only owner can burn");
+            require(staker_ == ownerOf(tokenId_), "StERC721: only owner can burn");
             IAssetVault assetVault_ = assetVaultRegistry.create(staker_);
-            require(address(assetVault_) == _erc721.ownerOf(tokenId_), "sterc721: invalid tokenId_");
+            require(address(assetVault_) == _erc721.ownerOf(tokenId_), "StERC721: invalid tokenId");
             _burn(tokenId_);
             assetVault_.withdrawERC721(staker_, address(_erc721), tokenId_);
         }
@@ -120,7 +120,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             tokenOwner_ = ownerOf(tokenId_);
-            require(msg.sender == tokenOwner_, "sterc721: only owner can delegate");
+            require(msg.sender == tokenOwner_, "StERC721: only owner can delegate");
             delegationHashes[i] = assetVaultRegistry.create(tokenOwner_).setDelegateCashV2(
                 delegate_, address(_erc721), tokenId_, rights_, value_
             );

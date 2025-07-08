@@ -2,6 +2,7 @@
 pragma solidity 0.8.29;
 
 import {Test} from "forge-std/Test.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {AssetVaultRegistry} from "../src/AssetVaultRegistry.sol";
 import {AssetVault} from "../src/AssetVault.sol";
 import {IAssetVault} from "../src/interfaces/IAssetVault.sol";
@@ -11,17 +12,17 @@ contract AssetVaultRegistryTest is Test {
     AssetVault public implementation;
     address public delegationRegistry;
     address public owner;
-    address public caller;
+    address public authorizedAddress;
 
     function setUp() public {
         owner = makeAddr("owner");
-        caller = makeAddr("caller");
+        authorizedAddress = makeAddr("authorizedAddress");
         delegationRegistry = makeAddr("delegationRegistry");
-
         vm.startPrank(owner);
         implementation = new AssetVault();
         registry = new AssetVaultRegistry();
         registry.initialize(address(implementation), delegationRegistry);
+        registry.authorize(authorizedAddress);
         vm.stopPrank();
     }
 
@@ -31,24 +32,44 @@ contract AssetVaultRegistryTest is Test {
         assertEq(registry.owner(), owner);
     }
 
+    function testAuthorize() public view {
+        assertEq(registry.isAuthorized(authorizedAddress), true);
+    }
+
+    function testAuthorizeNotOwner() public {
+        vm.prank(authorizedAddress);
+        vm.expectRevert(
+            abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, authorizedAddress)
+        );
+        registry.authorize(authorizedAddress);
+    }
+
     function testCreate() public {
-        vm.prank(caller);
+        vm.prank(authorizedAddress);
         IAssetVault vault = registry.create(owner);
         assertEq(address(registry.get(owner)), address(vault));
-        assertEq(vault.owner(), caller);
+        assertEq(vault.owner(), authorizedAddress);
     }
 
     function testCreateWithZeroAddress() public {
+        vm.prank(authorizedAddress);
         vm.expectRevert("AssetVaultRegistry: for is zero address");
         registry.create(address(0));
     }
 
     function testGet() public {
+        vm.prank(authorizedAddress);
         IAssetVault vault = registry.create(owner);
         assertEq(address(registry.get(owner)), address(vault));
     }
 
     function testGetNonExistent() public view {
         assertEq(address(registry.get(owner)), address(0));
+    }
+
+    function testAuthorizeZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert("AssetVaultRegistry: authorized address is zero address");
+        registry.authorize(address(0));
     }
 }
