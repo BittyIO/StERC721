@@ -28,16 +28,17 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
             || interfaceId == type(IERC1155Receiver).interfaceId;
     }
 
-    function setDelegateCashV2(address delegate_, address nft_, uint256 tokenId_, bytes32 rights_, bool value_)
+    function setDelegateCashV2(address delegate_, address erc721_, uint256 tokenId_, bytes32 rights_, bool value_)
         external
         override
         onlyOwner
+        returns (bytes32 delegationHash)
     {
         require(delegate_ != address(0), "AssetVault: invalid delegate");
-        delegationRegistryV2.delegateERC721(delegate_, nft_, tokenId_, rights_, value_);
+        return delegationRegistryV2.delegateERC721(delegate_, erc721_, tokenId_, rights_, value_);
     }
 
-    function getDelegateCashForTokenV2(address nft_, uint256 tokenId_)
+    function getDelegateCashForTokenV2(address erc721_, uint256 tokenId_)
         external
         view
         override
@@ -48,26 +49,26 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
 
         uint256 tokenDelegatesNum;
         for (uint256 j = 0; j < allDelegations.length; j++) {
-            if (allDelegations[j].contract_ == nft_ && allDelegations[j].tokenId == tokenId_) {
+            if (allDelegations[j].contract_ == erc721_ && allDelegations[j].tokenId == tokenId_) {
                 tokenDelegatesNum++;
             }
         }
         delegates = new address[](tokenDelegatesNum);
         uint256 tokenDelegateIdx;
         for (uint256 j = 0; j < allDelegations.length; j++) {
-            if (allDelegations[j].contract_ == nft_ && allDelegations[j].tokenId == tokenId_) {
+            if (allDelegations[j].contract_ == erc721_ && allDelegations[j].tokenId == tokenId_) {
                 delegates[tokenDelegateIdx] = allDelegations[j].to;
                 tokenDelegateIdx++;
             }
         }
     }
 
-    function withdrawERC721(address to_, address nft_, uint256 tokenId_) external override onlyOwner {
-        IERC721(nft_).safeTransferFrom(address(this), to_, tokenId_);
+    function withdrawERC721(address to_, address erc721_, uint256 tokenId_) external override onlyOwner {
+        IERC721(erc721_).safeTransferFrom(address(this), to_, tokenId_);
     }
 
     function withdrawERC20(address to_, address token_, uint256 amount_) external override onlyOwner {
-        IERC20(token_).safeTransferFrom(address(this), to_, amount_);
+        IERC20(token_).safeTransfer(to_, amount_);
     }
 
     function withdrawERC1155(

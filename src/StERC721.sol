@@ -50,7 +50,7 @@ abstract contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgr
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external view override returns (bytes4) {
-        require(msg.sender == address(_erc721), "StNft: nft not acceptable");
+        require(msg.sender == address(_erc721), "Sterc721: erc721 not acceptable");
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -69,9 +69,9 @@ abstract contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgr
         address staker_ = msg.sender;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
-            require(staker_ == ownerOf(tokenId_), "stNft: only owner can burn");
+            require(staker_ == ownerOf(tokenId_), "sterc721: only owner can burn");
             IAssetVault assetVault_ = assetVaultRegistry.create(staker_);
-            require(address(assetVault_) == _erc721.ownerOf(tokenId_), "stNft: invalid tokenId_");
+            require(address(assetVault_) == _erc721.ownerOf(tokenId_), "sterc721: invalid tokenId_");
             _burn(tokenId_);
             assetVault_.withdrawERC721(staker_, address(_erc721), tokenId_);
         }
@@ -118,7 +118,7 @@ abstract contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgr
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             tokenOwner_ = ownerOf(tokenId_);
-            require(msg.sender == tokenOwner_, "stNft: only owner can delegate");
+            require(msg.sender == tokenOwner_, "sterc721: only owner can delegate");
             assetVaultRegistry.create(tokenOwner_).setDelegateCashV2(
                 delegate_, address(_erc721), tokenId_, rights_, value_
             );

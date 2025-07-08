@@ -12,8 +12,8 @@ import {IStERC721Registry} from "./interfaces/IStERC721Registry.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
 
 contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, IStERC721Registry {
-    string public constant namePrefix = "StNFT";
-    string public constant symbolPrefix = "STNFT";
+    string public constant namePrefix = "Sterc721";
+    string public constant symbolPrefix = "STerc721";
     mapping(address => address) public stERC721s;
     IAssetVaultRegistry public assetVaultRegistry;
 
@@ -39,11 +39,11 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
     }
 
     function _buildInitParams(address erc721) internal view returns (bytes memory initParams) {
-        string memory nftSymbol = IERC721Metadata(erc721).symbol();
-        string memory bNftName = string(abi.encodePacked(namePrefix, " ", nftSymbol));
-        string memory bNftSymbol = string(abi.encodePacked(symbolPrefix, nftSymbol));
+        string memory erc721Symbol = IERC721Metadata(erc721).symbol();
+        string memory berc721Name = string(abi.encodePacked(namePrefix, " ", erc721Symbol));
+        string memory berc721Symbol = string(abi.encodePacked(symbolPrefix, erc721Symbol));
         initParams = abi.encodeWithSelector(
-            IStERC721.initialize.selector, IERC721Metadata(erc721), assetVaultRegistry, bNftName, bNftSymbol
+            IStERC721.initialize.selector, IERC721Metadata(erc721), assetVaultRegistry, berc721Name, berc721Symbol
         );
     }
 
