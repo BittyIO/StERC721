@@ -2,7 +2,9 @@
 pragma solidity 0.8.23;
 
 interface IAssetVault {
-    function initialize(address delegationRegistryV2_) external;
+    function initialize(address owner_, address delegationRegistryV2_) external;
+
+    function owner() external view returns (address);
 
     function setDelegateCashV2(address delegate_, address erc721_, uint256 tokenId_, bytes32 rights_, bool value_)
         external

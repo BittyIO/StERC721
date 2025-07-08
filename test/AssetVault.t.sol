@@ -27,7 +27,7 @@ contract AssetVaultTest is Test {
 
         vm.startPrank(owner);
         vault = new AssetVault();
-        vault.initialize(delegationRegistry);
+        vault.initialize(owner, delegationRegistry);
 
         mockERC1155 = new MintableERC1155("https://test.uri/");
         mockERC20 = new MintableERC20("TestERC20", "TST20", 18);

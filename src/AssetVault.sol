@@ -18,8 +18,12 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
 
     IDelegateRegistryV2 public delegationRegistryV2;
 
-    function initialize(address delegationRegistryV2_) external override initializer {
-        __Ownable_init(msg.sender);
+    function owner() public view virtual override(IAssetVault, OwnableUpgradeable) returns (address) {
+        return super.owner();
+    }
+
+    function initialize(address owner_, address delegationRegistryV2_) external override initializer {
+        __Ownable_init(owner_);
         delegationRegistryV2 = IDelegateRegistryV2(delegationRegistryV2_);
     }
 

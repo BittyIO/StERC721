@@ -22,13 +22,15 @@ contract AssetVaultRegistry is OwnableUpgradeable, ReentrancyGuardUpgradeable, I
         delegationRegistryV2 = delegationRegistryV2_;
     }
 
-    function create(address owner_) external override nonReentrant returns (IAssetVault) {
-        require(owner_ != address(0), "AssetVaultRegistry: owner is zero address");
-        IAssetVault assetVault_ = assetVaults[owner_];
+    function create(address for_) external override nonReentrant returns (IAssetVault) {
+        address owner_ = msg.sender;
+        require(for_ != address(0), "AssetVaultRegistry: for is zero address");
+        IAssetVault assetVault_ = assetVaults[for_];
         if (address(assetVault_) == address(0)) {
             assetVault_ = IAssetVault(assetVaultImpl.clone());
-            assetVault_.initialize(delegationRegistryV2);
+            assetVault_.initialize(owner_, delegationRegistryV2);
         }
+        assetVaults[for_] = assetVault_;
         return assetVault_;
     }
 
