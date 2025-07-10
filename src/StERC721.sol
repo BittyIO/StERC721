@@ -9,6 +9,7 @@ import {
 } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
@@ -23,7 +24,8 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     IERC721Metadata private _erc721;
     IAssetVaultRegistry public assetVaultRegistry;
     string private _customBaseURI;
-    mapping(address => bool) private _authorized;
+    mapping(uint256 => IAssetVault) public tokenIdToAssetVault;
+
     function disableInitializers() external override {
         _disableInitializers();
     }
@@ -59,7 +61,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
 
     function mint(uint256[] calldata tokenIds_) external override nonReentrant {
         address staker_ = msg.sender;
-            IAssetVault assetVault_ = assetVaultRegistry.create(staker_);
+        IAssetVault assetVault_ = assetVaultRegistry.create(staker_);
         uint256 tokenId_;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
@@ -73,15 +75,24 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     function burn(uint256[] calldata tokenIds_) external override nonReentrant {
         uint256 tokenId_;
         address staker_ = msg.sender;
+        IAssetVault assetVault_;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             require(staker_ == ownerOf(tokenId_), "StERC721: only owner can burn");
-            IAssetVault assetVault_ = assetVaultRegistry.create(staker_);
+            assetVault_ = tokenIdToAssetVault[tokenId_];
             require(address(assetVault_) == _erc721.ownerOf(tokenId_), "StERC721: invalid tokenId");
             _burn(tokenId_);
             assetVault_.withdrawERC721(staker_, address(_erc721), tokenId_);
         }
         emit Burned(staker_, tokenIds_);
+    }
+
+    function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721Upgradeable) {
+        IAssetVault assetVaultFrom_ = tokenIdToAssetVault[tokenId];
+        IAssetVault assetVaultTo_ = assetVaultRegistry.create(to);
+        tokenIdToAssetVault[tokenId] = assetVaultTo_;
+        assetVaultFrom_.withdrawERC721(address(assetVaultTo_), address(_erc721), tokenId);
+        super.transferFrom(from, to, tokenId);
     }
 
     function underlyingAsset() external view override returns (address) {

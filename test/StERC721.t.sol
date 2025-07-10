@@ -64,6 +64,23 @@ contract StERC721Test is Test {
         vm.stopPrank();
     }
 
+    function testTransferFrom() public {
+        uint256 tokenId = 1;
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        vm.startPrank(user);
+        mockERC721.mint(user, tokenId);
+        mockERC721.setApprovalForAll(address(stERC721), true);
+        stERC721.mint(tokenIds);
+        stERC721.safeTransferFrom(user, owner, tokenId);
+        vm.stopPrank();
+
+        address assetVault = address(registry.get(owner));
+        assertEq(stERC721.ownerOf(tokenId), owner);
+        assertEq(mockERC721.ownerOf(tokenId), assetVault);
+    }
+
     function testBurn() public {
         uint256 tokenId = 1;
         uint256[] memory tokenIds = new uint256[](1);

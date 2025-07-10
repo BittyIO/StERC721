@@ -4,14 +4,18 @@ pragma solidity 0.8.29;
 import {Test} from "forge-std/Test.sol";
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 import {AssetVault} from "../src/AssetVault.sol";
 import {MintableERC1155} from "./mock/MintableERC1155.sol";
 import {MintableERC721} from "./mock/MintableERC721.sol";
 import {MintableERC20} from "./mock/MintableERC20.sol";
 import {IDelegateRegistryV2} from "../src/interfaces/IDelegateRegistryV2.sol";
+import {console} from "forge-std/console.sol";
 
 contract AssetVaultTest is Test {
+    using Clones for address;
+
     AssetVault public vault;
     MintableERC1155 public mockERC1155;
     MintableERC20 public mockERC20;
@@ -34,6 +38,13 @@ contract AssetVaultTest is Test {
         mockERC721 = new MintableERC721("TestERC721", "TST721");
 
         vm.stopPrank();
+    }
+
+    function testCloneGas() public {
+        uint256 gasBefore = gasleft();
+        address(vault).clone();
+        uint256 gasAfter = gasleft();
+        console.log("Gas used:", gasBefore - gasAfter);
     }
 
     function testInitialize() public view {
