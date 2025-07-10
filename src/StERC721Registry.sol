@@ -17,7 +17,11 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
     mapping(address => address) public stERC721s;
     IAssetVaultRegistry public assetVaultRegistry;
 
-    function initialize(IAssetVaultRegistry assetVaultRegistry_) external initializer {
+    function disableInitializers() external override {
+        _disableInitializers();
+    }
+
+    function initialize(IAssetVaultRegistry assetVaultRegistry_) external override initializer {
         __Ownable_init(msg.sender);
         assetVaultRegistry = assetVaultRegistry_;
     }

@@ -10,6 +10,8 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     event Minted(address indexed to, uint256[] tokenId);
     event Burned(address indexed from, uint256[] tokenId);
 
+    function disableInitializers() external;
+
     function initialize(
         IERC721Metadata erc721_,
         IAssetVaultRegistry assetVaultRegistry_,

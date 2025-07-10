@@ -18,6 +18,10 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
 
     IDelegateRegistryV2 public delegationRegistryV2;
 
+    function disableInitializers() external override {
+        _disableInitializers();
+    }
+
     function owner() public view virtual override(IAssetVault, OwnableUpgradeable) returns (address) {
         return super.owner();
     }

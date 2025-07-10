@@ -4,6 +4,7 @@ pragma solidity 0.8.29;
 import {IAssetVault} from "./IAssetVault.sol";
 
 interface IAssetVaultRegistry {
+    function disableInitializers() external;
     function authorize(address authorizedAddress_) external;
     function isAuthorized(address authorizedAddress_) external view returns (bool);
     function create(address owner_) external returns (IAssetVault assetVault);

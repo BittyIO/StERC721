@@ -20,6 +20,10 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
         _;
     }
 
+    function disableInitializers() external override {
+        _disableInitializers();
+    }
+
     function initialize(address assetVaultImpl_, address delegationRegistryV2_) external initializer {
         __Ownable_init(msg.sender);
         assetVaultImpl = assetVaultImpl_;

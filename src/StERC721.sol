@@ -24,6 +24,9 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     IAssetVaultRegistry public assetVaultRegistry;
     string private _customBaseURI;
     mapping(address => bool) private _authorized;
+    function disableInitializers() external override {
+        _disableInitializers();
+    }
 
     function initialize(
         IERC721Metadata erc721_,
