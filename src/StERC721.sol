@@ -57,14 +57,17 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    function mint(address to_, uint256[] calldata tokenIds_) external override nonReentrant {
+    function mint(uint256[] calldata tokenIds_) external override nonReentrant {
         address staker_ = msg.sender;
-        for (uint256 i = 0; i < tokenIds_.length; i++) {
             IAssetVault assetVault_ = assetVaultRegistry.create(staker_);
-            _erc721.safeTransferFrom(staker_, address(assetVault_), tokenIds_[i]);
-            _safeMint(to_, tokenIds_[i]);
+        uint256 tokenId_;
+        for (uint256 i = 0; i < tokenIds_.length; i++) {
+            tokenId_ = tokenIds_[i];
+            tokenIdToAssetVault[tokenId_] = assetVault_;
+            _erc721.safeTransferFrom(staker_, address(assetVault_), tokenId_);
+            _safeMint(staker_, tokenId_);
         }
-        emit Minted(to_, tokenIds_);
+        emit Minted(staker_, tokenIds_);
     }
 
     function burn(uint256[] calldata tokenIds_) external override nonReentrant {

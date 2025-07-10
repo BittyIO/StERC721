@@ -18,7 +18,7 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
         string memory name_,
         string memory symbol_
     ) external;
-    function mint(address to, uint256[] calldata tokenIds) external;
+    function mint(uint256[] calldata tokenIds) external;
 
     function burn(uint256[] calldata tokenIds) external;
 

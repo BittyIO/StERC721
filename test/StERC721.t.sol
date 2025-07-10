@@ -57,7 +57,7 @@ contract StERC721Test is Test {
         mockERC721.mint(user, tokenId);
         mockERC721.setApprovalForAll(address(stERC721), true);
 
-        stERC721.mint(user, tokenIds);
+        stERC721.mint(tokenIds);
 
         assertEq(stERC721.ownerOf(tokenId), user);
         assertEq(mockERC721.ownerOf(tokenId), address(registry.get(user)));
@@ -73,7 +73,7 @@ contract StERC721Test is Test {
         mockERC721.mint(user, tokenId);
         mockERC721.setApprovalForAll(address(stERC721), true);
 
-        stERC721.mint(user, tokenIds);
+        stERC721.mint(tokenIds);
         stERC721.burn(tokenIds);
 
         assertEq(mockERC721.ownerOf(tokenId), user);
@@ -92,7 +92,7 @@ contract StERC721Test is Test {
         mockERC721.mint(user, tokenId);
         mockERC721.setApprovalForAll(address(stERC721), true);
 
-        stERC721.mint(user, tokenIds);
+        stERC721.mint(tokenIds);
         bytes32 expectedDelegationHash = bytes32("DELEGATION_HASH");
 
         vm.mockCall(
@@ -115,7 +115,7 @@ contract StERC721Test is Test {
         vm.startPrank(user);
         mockERC721.mint(user, tokenId);
         mockERC721.setApprovalForAll(address(stERC721), true);
-        stERC721.mint(user, tokenIds);
+        stERC721.mint(tokenIds);
         vm.stopPrank();
 
         assertEq(stERC721.tokenURI(tokenId), mockERC721.tokenURI(tokenId));
