@@ -30,7 +30,7 @@ contract StERC721RegistryTest is Test {
         assetVaultRegistry = new AssetVaultRegistry();
         assetVaultRegistry.initialize(address(implementation), delegationRegistry);
         registry = new StERC721Registry();
-        registry.initialize(IAssetVaultRegistry(address(assetVaultRegistry)));
+        registry.initialize("eth", IAssetVaultRegistry(address(assetVaultRegistry)));
         assetVaultRegistry.transferOwnership(address(registry));
         vm.stopPrank();
     }

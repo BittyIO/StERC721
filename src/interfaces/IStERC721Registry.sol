@@ -9,7 +9,7 @@ interface IStERC721Registry {
 
     function disableInitializers() external;
 
-    function initialize(IAssetVaultRegistry assetVaultRegistry_) external;
+    function initialize(string memory chainName_, IAssetVaultRegistry assetVaultRegistry_) external;
 
     function createStERC721(address erc721, address stERC721Impl) external returns (address stERC721);
     function batchCreateStERC721(address[] calldata erc721s, address stERC721Impl)
