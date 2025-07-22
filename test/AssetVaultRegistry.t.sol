@@ -72,6 +72,4 @@ contract AssetVaultRegistryTest is Test {
         vm.expectRevert("AssetVaultRegistry: authorized address is zero address");
         registry.authorize(address(0));
     }
-
-
 }

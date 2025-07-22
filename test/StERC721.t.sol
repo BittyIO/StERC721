@@ -217,7 +217,6 @@ contract StERC721Test is Test {
         assertEq(mockERC721_A.ownerOf(tokenIdA), address(registry.get(testUser)));
         vm.stopPrank();
 
-
         // mint mockERC721_B
         vm.startPrank(testUser);
         mockERC721_B.mint(testUser, tokenIdB);
@@ -243,6 +242,4 @@ contract StERC721Test is Test {
         vm.expectRevert();
         stERC721_B.ownerOf(tokenIdB);
     }
-
-
 }

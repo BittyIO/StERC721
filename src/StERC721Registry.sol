@@ -22,7 +22,11 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         _disableInitializers();
     }
 
-    function initialize(string memory chainName_, IAssetVaultRegistry assetVaultRegistry_) external override initializer {
+    function initialize(string memory chainName_, IAssetVaultRegistry assetVaultRegistry_)
+        external
+        override
+        initializer
+    {
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         assetVaultRegistry = assetVaultRegistry_;
@@ -57,7 +61,12 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         string memory berc721Name = string(abi.encodePacked(namePrefix, " ", erc721Symbol));
         string memory berc721Symbol = string(abi.encodePacked(symbolPrefix, erc721Symbol));
         initParams = abi.encodeWithSelector(
-            IStERC721.initialize.selector, _chainName, IERC721Metadata(erc721), assetVaultRegistry, berc721Name, berc721Symbol
+            IStERC721.initialize.selector,
+            _chainName,
+            IERC721Metadata(erc721),
+            assetVaultRegistry,
+            berc721Name,
+            berc721Symbol
         );
     }
 
