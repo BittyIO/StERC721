@@ -18,3 +18,7 @@ docs/
 node_modules
 
 lib/forge-std/
+
+coverage/
+
+lcov.info
