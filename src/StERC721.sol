@@ -24,13 +24,14 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     IERC721Metadata private _erc721;
     IAssetVaultRegistry public assetVaultRegistry;
     string private _customBaseURI;
-    mapping(uint256 => IAssetVault) public tokenIdToAssetVault;
+    string private _chainName;
 
     function disableInitializers() external override {
         _disableInitializers();
     }
 
     function initialize(
+        string memory chainName_,
         IERC721Metadata erc721_,
         IAssetVaultRegistry assetVaultRegistry_,
         string memory name_,
@@ -42,6 +43,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         __ERC721Enumerable_init();
         _erc721 = erc721_;
         assetVaultRegistry = assetVaultRegistry_;
+        _chainName = chainName_;
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -61,11 +63,10 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
 
     function mint(uint256[] calldata tokenIds_) external override nonReentrant {
         address staker_ = msg.sender;
-        IAssetVault assetVault_ = assetVaultRegistry.create(staker_);
+        address assetVault_ = assetVaultRegistry.create(staker_);
         uint256 tokenId_;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
-            tokenIdToAssetVault[tokenId_] = assetVault_;
             _erc721.safeTransferFrom(staker_, address(assetVault_), tokenId_);
             _safeMint(staker_, tokenId_);
         }
@@ -75,23 +76,22 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     function burn(uint256[] calldata tokenIds_) external override nonReentrant {
         uint256 tokenId_;
         address staker_ = msg.sender;
-        IAssetVault assetVault_;
+        address assetVault_;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             require(staker_ == ownerOf(tokenId_), "StERC721: only owner can burn");
-            assetVault_ = tokenIdToAssetVault[tokenId_];
-            require(address(assetVault_) == _erc721.ownerOf(tokenId_), "StERC721: invalid tokenId");
+            assetVault_ = assetVaultRegistry.get(staker_);
+            require(assetVault_ != address(0), "StERC721: asset vault not found");
+            require(assetVault_ == _erc721.ownerOf(tokenId_), "StERC721: invalid tokenId");
             _burn(tokenId_);
-            assetVault_.withdrawERC721(staker_, address(_erc721), tokenId_);
+            assetVaultRegistry.withdrawERC721(staker_, staker_, address(_erc721), tokenId_);
         }
         emit Burned(staker_, tokenIds_);
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721Upgradeable) {
-        IAssetVault assetVaultFrom_ = tokenIdToAssetVault[tokenId];
-        IAssetVault assetVaultTo_ = assetVaultRegistry.create(to);
-        tokenIdToAssetVault[tokenId] = assetVaultTo_;
-        assetVaultFrom_.withdrawERC721(address(assetVaultTo_), address(_erc721), tokenId);
+        address assetVaultTo_ = assetVaultRegistry.create(to);
+        assetVaultRegistry.withdrawERC721(from, assetVaultTo_, address(_erc721), tokenId);
         super.transferFrom(from, to, tokenId);
     }
 
@@ -122,7 +122,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
 
     function contractURI() external view override returns (string memory) {
         string memory hexAddress = Strings.toHexString(uint256(uint160(address(this))), 20);
-        return string(abi.encodePacked("https://metadata.bitty.io/eth/", hexAddress));
+        return string(abi.encodePacked("https://metadata.bitty.io/", _chainName, "/", hexAddress));
     }
 
     function setDelegateCashV2(address delegate_, uint256[] calldata tokenIds_, bytes32 rights_, bool value_)
@@ -138,8 +138,8 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
             tokenId_ = tokenIds_[i];
             tokenOwner_ = ownerOf(tokenId_);
             require(msg.sender == tokenOwner_, "StERC721: only owner can delegate");
-            delegationHashes[i] = assetVaultRegistry.create(tokenOwner_).setDelegateCashV2(
-                delegate_, address(_erc721), tokenId_, rights_, value_
+            delegationHashes[i] = assetVaultRegistry.setDelegateCashV2(
+                tokenOwner_, delegate_, address(_erc721), tokenId_, rights_, value_
             );
         }
     }
@@ -152,11 +152,11 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     {
         delegates = new address[][](tokenIds_.length);
         for (uint256 i = 0; i < tokenIds_.length; i++) {
-            IAssetVault assetVault_ = assetVaultRegistry.get(ownerOf(tokenIds_[i]));
-            if (address(assetVault_) == address(0)) {
+            address assetVault_ = assetVaultRegistry.get(ownerOf(tokenIds_[i]));
+            if (assetVault_ == address(0)) {
                 continue;
             }
-            delegates[i] = assetVault_.getDelegateCashForTokenV2(address(_erc721), tokenIds_[i]);
+            delegates[i] = IAssetVault(assetVault_).getDelegateCashForTokenV2(address(_erc721), tokenIds_[i]);
         }
     }
 }

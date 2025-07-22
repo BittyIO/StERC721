@@ -13,6 +13,7 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     function disableInitializers() external;
 
     function initialize(
+        string memory chainName_,
         IERC721Metadata erc721_,
         IAssetVaultRegistry assetVaultRegistry_,
         string memory name_,

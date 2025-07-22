@@ -46,20 +46,20 @@ contract AssetVaultRegistryTest is Test {
 
     function testCreate() public {
         vm.prank(authorizedAddress);
-        IAssetVault vault = registry.create(owner);
+        address vault = registry.create(owner);
         assertEq(address(registry.get(owner)), address(vault));
-        assertEq(vault.owner(), authorizedAddress);
+        assertEq(IAssetVault(vault).owner(), address(registry));
     }
 
     function testCreateWithZeroAddress() public {
         vm.prank(authorizedAddress);
-        vm.expectRevert("AssetVaultRegistry: for is zero address");
+        vm.expectRevert("AssetVaultRegistry: owner is zero address");
         registry.create(address(0));
     }
 
     function testGet() public {
         vm.prank(authorizedAddress);
-        IAssetVault vault = registry.create(owner);
+        address vault = registry.create(owner);
         assertEq(address(registry.get(owner)), address(vault));
     }
 
@@ -72,4 +72,6 @@ contract AssetVaultRegistryTest is Test {
         vm.expectRevert("AssetVaultRegistry: authorized address is zero address");
         registry.authorize(address(0));
     }
+
+
 }

@@ -12,6 +12,7 @@ import {IStERC721Registry} from "./interfaces/IStERC721Registry.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
 
 contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, IStERC721Registry {
+    string private _chainName;
     string public constant namePrefix = "StERC721";
     string public constant symbolPrefix = "St";
     mapping(address => address) public stERC721s;
@@ -21,9 +22,11 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         _disableInitializers();
     }
 
-    function initialize(IAssetVaultRegistry assetVaultRegistry_) external override initializer {
+    function initialize(string memory chainName_, IAssetVaultRegistry assetVaultRegistry_) external override initializer {
         __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
         assetVaultRegistry = assetVaultRegistry_;
+        _chainName = chainName_;
     }
 
     function createStERC721(address erc721, address stERC721Impl)
@@ -54,7 +57,7 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         string memory berc721Name = string(abi.encodePacked(namePrefix, " ", erc721Symbol));
         string memory berc721Symbol = string(abi.encodePacked(symbolPrefix, erc721Symbol));
         initParams = abi.encodeWithSelector(
-            IStERC721.initialize.selector, IERC721Metadata(erc721), assetVaultRegistry, berc721Name, berc721Symbol
+            IStERC721.initialize.selector, _chainName, IERC721Metadata(erc721), assetVaultRegistry, berc721Name, berc721Symbol
         );
     }
 

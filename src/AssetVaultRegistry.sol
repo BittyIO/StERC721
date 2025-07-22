@@ -35,23 +35,37 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
         authorized[authorizedAddress_] = true;
     }
 
-    function create(address for_) external override onlyAuthorized returns (IAssetVault) {
-        address owner_ = msg.sender;
-        require(for_ != address(0), "AssetVaultRegistry: for is zero address");
-        IAssetVault assetVault_ = assetVaults[for_];
+    function create(address owner_) external override onlyAuthorized returns (address assetVault) {
+        require(owner_ != address(0), "AssetVaultRegistry: owner is zero address");
+        IAssetVault assetVault_ = assetVaults[owner_];
         if (address(assetVault_) == address(0)) {
             assetVault_ = IAssetVault(assetVaultImpl.clone());
-            assetVault_.initialize(owner_, delegationRegistryV2);
+            assetVault_.initialize(address(this), delegationRegistryV2);
         }
-        assetVaults[for_] = assetVault_;
-        return assetVault_;
-    }
-
-    function get(address owner_) external view override returns (IAssetVault) {
-        return assetVaults[owner_];
+        assetVaults[owner_] = assetVault_;
+        return address(assetVault_);
     }
 
     function isAuthorized(address authorizedAddress_) external view returns (bool) {
         return authorized[authorizedAddress_];
+    }
+
+    function get(address owner_) external view override returns (address assetVault) {
+        return address(assetVaults[owner_]);
+    }
+
+    function setDelegateCashV2(
+        address owner_,
+        address delegate_,
+        address erc721_,
+        uint256 tokenId_,
+        bytes32 rights_,
+        bool value_
+    ) external override onlyAuthorized returns (bytes32 delegationHash) {
+        return assetVaults[owner_].setDelegateCashV2(delegate_, erc721_, tokenId_, rights_, value_);
+    }
+
+    function withdrawERC721(address owner_, address to_, address erc721_, uint256 tokenId_) external override {
+        assetVaults[owner_].withdrawERC721(to_, erc721_, tokenId_);
     }
 }

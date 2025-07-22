@@ -36,7 +36,7 @@ contract StERC721Test is Test {
         mockERC721 = new MintableERC721("TestERC721", "TST721");
 
         stERC721 = new StERC721();
-        stERC721.initialize(mockERC721, registry, "Staked ERC721", "stERC721");
+        stERC721.initialize("eth", mockERC721, registry, "Staked ERC721", "stERC721");
         registry.authorize(address(stERC721));
 
         vm.stopPrank();
