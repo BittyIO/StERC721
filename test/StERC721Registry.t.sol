@@ -35,6 +35,15 @@ contract StERC721RegistryTest is Test {
         vm.stopPrank();
     }
 
+    function testDisableInitializers() public {
+        vm.startPrank(owner);
+        StERC721Registry registry1 = new StERC721Registry();
+        registry1.disableInitializers();
+        vm.expectRevert();
+        registry1.initialize("eth", IAssetVaultRegistry(address(assetVaultRegistry)));
+        vm.stopPrank();
+    }
+
     function testCreateStERC721_RevertIfNotOwner() public {
         MintableERC721 erc721 = new MintableERC721("Test", "TEST");
         StERC721 implementation = new StERC721();
