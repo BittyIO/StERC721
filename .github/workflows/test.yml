@@ -49,17 +49,13 @@ jobs:
           forge test -vvv
         id: test
 
-      - uses: tecolicom/actions-use-apt-tools@v1
-        with:
-          tools: lcov libdatetime-perl
-
       - name: Run Forge coverage
         run: |
-          npm run coverage
+          forge coverage --no-match-coverage 'test|node_modules' --report lcov
         id: coverage
 
       - uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
-          files: ./coverage/index.html
+          files: ./lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}

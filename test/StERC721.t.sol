@@ -9,6 +9,12 @@ import {MintableERC721} from "./mock/MintableERC721.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IDelegateRegistryV2} from "../src/interfaces/IDelegateRegistryV2.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {ERC721EnumerableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {IStERC721} from "../src/interfaces/IStERC721.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract StERC721Test is Test {
     using Strings for uint256;
@@ -51,6 +57,23 @@ contract StERC721Test is Test {
         assertEq(address(stERC721_A.assetVaultRegistry()), address(registry));
         assertEq(stERC721_A.underlyingAsset(), address(mockERC721_A));
         assertEq(stERC721_A.owner(), owner);
+    }
+
+    function testDisableInitializers() public {
+        vm.startPrank(owner);
+        StERC721 stERC721 = new StERC721();
+        stERC721.disableInitializers();
+        vm.expectRevert();
+        stERC721.initialize("eth", mockERC721_A, registry, "Staked ERC721", "stERC721");
+        vm.stopPrank();
+    }
+
+    function testSupportsInterface() public view {
+        // IStERC721 interfaceId
+        bytes4 iStERC721InterfaceId = type(IStERC721).interfaceId;
+        assertTrue(stERC721_A.supportsInterface(iStERC721InterfaceId));
+        // Random interfaceId should return false
+        assertFalse(stERC721_A.supportsInterface(0x12345678));
     }
 
     function testMint() public {
@@ -203,7 +226,6 @@ contract StERC721Test is Test {
         uint256 tokenIdA = 10;
         uint256 tokenIdB = 20;
 
-        // 用户地址
         address testUser = address(0x3333);
 
         // mint mockERC721_A
@@ -241,5 +263,83 @@ contract StERC721Test is Test {
         vm.stopPrank();
         vm.expectRevert();
         stERC721_B.ownerOf(tokenIdB);
+    }
+
+    function testGetDelegateCashForTokenV2() public {
+        address erc721 = address(mockERC721_A);
+        uint256 tokenId = 1;
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId);
+        mockERC721_A.setApprovalForAll(address(stERC721_A), true);
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+        stERC721_A.mint(tokenIds);
+        vm.stopPrank();
+
+        address vault = address(registry.get(user));
+
+        address[] memory delegates = new address[](2);
+        delegates[0] = makeAddr("delegate1");
+        delegates[1] = makeAddr("delegate2");
+
+        IDelegateRegistryV2.Delegation[] memory delegations = new IDelegateRegistryV2.Delegation[](2);
+        delegations[0] = IDelegateRegistryV2.Delegation({
+            type_: IDelegateRegistryV2.DelegationType.ERC721,
+            contract_: erc721,
+            tokenId: tokenId,
+            to: delegates[0],
+            from: address(vault),
+            rights: bytes32(""),
+            amount: 0
+        });
+        delegations[1] = IDelegateRegistryV2.Delegation({
+            type_: IDelegateRegistryV2.DelegationType.ERC721,
+            contract_: erc721,
+            tokenId: tokenId,
+            to: delegates[1],
+            from: address(vault),
+            rights: bytes32(""),
+            amount: 0
+        });
+
+        bytes memory returnData = abi.encode(delegations);
+        vm.mockCall(
+            delegationRegistry,
+            abi.encodeWithSelector(IDelegateRegistryV2.getOutgoingDelegations.selector, address(vault)),
+            returnData
+        );
+        address[][] memory delegateCash = stERC721_A.getDelegateCashForTokenV2(tokenIds);
+
+        assertEq(delegateCash.length, 1);
+        assertEq(delegateCash[0][0], delegates[0]);
+        assertEq(delegateCash[0][1], delegates[1]);
+    }
+
+    function test_onERC721Received_acceptsFromUnderlying() public {
+        address staker = user;
+        uint256 tokenId = 42;
+
+        // Mint token to staker
+        vm.startPrank(staker);
+        mockERC721_A.mint(staker, tokenId);
+        vm.stopPrank();
+        // Call onERC721Received from the underlying ERC721 contract
+        vm.prank(address(mockERC721_A));
+        bytes4 selector = stERC721_A.onERC721Received(address(mockERC721_A), staker, tokenId, "");
+        assertEq(selector, IERC721Receiver.onERC721Received.selector, "Should return correct selector");
+        vm.stopPrank();
+    }
+
+    function test_onERC721Received_revertsIfNotFromUnderlying() public {
+        address staker = user;
+        uint256 tokenId = 43;
+        // Mint token to staker
+        vm.startPrank(staker);
+        mockERC721_A.mint(staker, tokenId);
+        vm.stopPrank();
+        vm.expectRevert("StERC721: erc721 not acceptable");
+        stERC721_A.onERC721Received(address(mockERC721_A), staker, tokenId, "");
+        vm.stopPrank();
     }
 }

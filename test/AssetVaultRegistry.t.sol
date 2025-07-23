@@ -26,6 +26,14 @@ contract AssetVaultRegistryTest is Test {
         vm.stopPrank();
     }
 
+    function testDisableInitializers() public {
+        vm.prank(owner);
+        AssetVaultRegistry registry1 = new AssetVaultRegistry();
+        registry1.disableInitializers();
+        vm.expectRevert();
+        registry1.initialize(address(implementation), delegationRegistry);
+    }
+
     function testInitialize() public view {
         assertEq(registry.assetVaultImpl(), address(implementation));
         assertEq(registry.delegationRegistryV2(), delegationRegistry);
