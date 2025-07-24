@@ -16,7 +16,7 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     address public delegationRegistryV2;
 
     modifier onlyAuthorized() {
-        require(authorized[msg.sender], "AssetVaultRegistry: not authorized");
+        require(authorized[msg.sender], "AssetVaultRegistry: caller is not authorized");
         _;
     }
 
@@ -65,7 +65,11 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
         return assetVaults[owner_].setDelegateCashV2(delegate_, erc721_, tokenId_, rights_, value_);
     }
 
-    function withdrawERC721(address owner_, address to_, address erc721_, uint256 tokenId_) external override {
+    function withdrawERC721(address owner_, address to_, address erc721_, uint256 tokenId_)
+        external
+        override
+        onlyAuthorized
+    {
         assetVaults[owner_].withdrawERC721(to_, erc721_, tokenId_);
     }
 }
