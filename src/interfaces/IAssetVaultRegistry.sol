@@ -5,6 +5,7 @@ import {IAssetVault} from "./IAssetVault.sol";
 
 interface IAssetVaultRegistry {
     function disableInitializers() external;
+    function initialize(address assetVaultImpl_, address delegationRegistryV2_) external;
     function authorize(address authorizedAddress_) external;
     function isAuthorized(address authorizedAddress_) external view returns (bool);
     function create(address owner_) external returns (address assetVault);

@@ -4,6 +4,12 @@ out = "out"
 libs = ["lib"]
 solc = "0.8.29"
 
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
+
+
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"
  

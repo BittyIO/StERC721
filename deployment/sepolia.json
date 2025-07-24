@@ -1,0 +1,14 @@
+[
+  {
+    "contract": "AssetVault",
+    "address": "0xa529af4e9cc6e1df4b93a4306eefce9ff1fd6774"
+  },
+  {
+    "contract": "AssetVaultRegistry",
+    "address": "0x8431b66e04a1397bd13e7582eae13401d13729e7"
+  },
+  {
+    "contract": "StERC721Registry",
+    "address": "0xce21ce195fe180f77a47ddd762080f0a29f70288"
+  }
+]
