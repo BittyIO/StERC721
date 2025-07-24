@@ -16,6 +16,4 @@ contract UpgradeableProxy is TransparentUpgradeableProxy {
     function implementation() public view returns (address) {
         return _implementation();
     }
-
-    receive() external payable {}
 }
