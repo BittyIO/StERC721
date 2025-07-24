@@ -229,4 +229,39 @@ contract StERC721RegistryTest is Test {
             assertEq(UpgradeableProxy(payable(stERC721s[i])).implementation(), address(newImplementation));
         }
     }
+
+    function testSetBaseURI_Owner() public {
+        MintableERC721 erc721 = new MintableERC721("Test", "TEST");
+        StERC721 implementation = new StERC721();
+
+        vm.startPrank(owner);
+        address stERC721 = registry.createStERC721(address(erc721), address(implementation));
+        string memory baseURI = "https://example.com/metadata/";
+        registry.setBaseURI(stERC721, baseURI);
+        uint256[] memory tokenIds = new uint256[](1);
+        uint256 tokenId = 1;
+        tokenIds[0] = tokenId;
+        erc721.mint(owner, tokenId);
+        erc721.setApprovalForAll(address(stERC721), true);
+        StERC721(stERC721).mint(tokenIds);
+
+        assertEq(StERC721(stERC721).tokenURI(1), string(abi.encodePacked(baseURI, "1")));
+        vm.stopPrank();
+    }
+
+    function testSetBaseURI_RevertIfNotOwner() public {
+        MintableERC721 erc721 = new MintableERC721("Test", "TEST");
+        StERC721 implementation = new StERC721();
+
+        vm.startPrank(owner);
+        address stERC721 = registry.createStERC721(address(erc721), address(implementation));
+        vm.stopPrank();
+
+        string memory baseURI = "https://example.com/metadata/";
+
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.setBaseURI(stERC721, baseURI);
+        vm.stopPrank();
+    }
 }
