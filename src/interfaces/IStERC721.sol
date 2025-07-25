@@ -32,4 +32,6 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     function getDelegateCashForTokenV2(uint256[] calldata tokenIds_) external view returns (address[][] memory);
 
     function contractURI() external view returns (string memory);
+
+    function setBaseURI(string memory baseURI_) external;
 }

@@ -48,6 +48,8 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         require(stERC721Impl != address(0), "StERC721Registry: impl is zero address");
         stERC721 = _createProxy(erc721, stERC721Impl);
         stERC721s[erc721] = stERC721;
+
+        // make sure transfer ownership to stERC721Registry
         assetVaultRegistry.authorize(address(stERC721));
     }
 
@@ -112,5 +114,9 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
 
     function getStERC721(address erc721) external view override returns (address stERC721) {
         stERC721 = stERC721s[erc721];
+    }
+
+    function setBaseURI(address stERC721_, string memory baseURI_) external override onlyOwner {
+        IStERC721(stERC721_).setBaseURI(baseURI_);
     }
 }

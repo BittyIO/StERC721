@@ -99,7 +99,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         return address(_erc721);
     }
 
-    function setBaseURI(string memory baseURI_) public onlyOwner {
+    function setBaseURI(string memory baseURI_) external override onlyOwner {
         _customBaseURI = baseURI_;
     }
 

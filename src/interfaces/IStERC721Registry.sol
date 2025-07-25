@@ -19,5 +19,7 @@ interface IStERC721Registry {
     function batchUpgradeStERC721(address[] calldata erc721s, address stERC721Impl, bytes[] calldata encodedCallDatas)
         external;
 
+    function setBaseURI(address erc721, string memory baseURI_) external;
+
     function getStERC721(address erc721) external view returns (address stERC721);
 }
