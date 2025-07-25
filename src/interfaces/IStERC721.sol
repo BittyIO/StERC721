@@ -8,7 +8,7 @@ import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions
 
 interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     event Minted(address indexed to, uint256[] tokenId);
-    event Burned(address indexed from, uint256[] tokenId);
+    event Burned(address indexed from, address indexed to, uint256[] tokenId);
 
     function disableInitializers() external;
 
@@ -21,6 +21,7 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     ) external;
     function mint(uint256[] calldata tokenIds) external;
 
+    function burn(uint256[] calldata tokenIds, address receiver) external;
     function burn(uint256[] calldata tokenIds) external;
 
     function underlyingAsset() external view returns (address);

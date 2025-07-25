@@ -127,6 +127,27 @@ contract StERC721Test is Test {
         vm.stopPrank();
     }
 
+    function testBurnToDifferentReceiver() public {
+        uint256 tokenId = 1;
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        address receiver = address(0xBEEF);
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId);
+        mockERC721_A.setApprovalForAll(address(stERC721_A), true);
+
+        stERC721_A.mint(tokenIds);
+        stERC721_A.burn(tokenIds, receiver);
+
+        assertEq(mockERC721_A.ownerOf(tokenId), receiver);
+
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, tokenId));
+        stERC721_A.ownerOf(tokenId);
+        vm.stopPrank();
+    }
+
     function testSetDelegateCashV2() public {
         uint256 tokenId = 1;
         uint256[] memory tokenIds = new uint256[](1);

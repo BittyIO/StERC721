@@ -74,6 +74,14 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     }
 
     function burn(uint256[] calldata tokenIds_) external override nonReentrant {
+        _burn(tokenIds_, msg.sender);
+    }
+
+    function burn(uint256[] calldata tokenIds_, address receiver_) external override nonReentrant {
+        _burn(tokenIds_, receiver_);
+    }
+
+    function _burn(uint256[] calldata tokenIds_, address receiver_) internal {
         uint256 tokenId_;
         address staker_ = msg.sender;
         address assetVault_;
@@ -84,9 +92,9 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
             require(assetVault_ != address(0), "StERC721: asset vault not found");
             require(assetVault_ == _erc721.ownerOf(tokenId_), "StERC721: invalid tokenId");
             _burn(tokenId_);
-            assetVaultRegistry.withdrawERC721(staker_, staker_, address(_erc721), tokenId_);
+            assetVaultRegistry.withdrawERC721(staker_, receiver_, address(_erc721), tokenId_);
         }
-        emit Burned(staker_, tokenIds_);
+        emit Burned(staker_, receiver_, tokenIds_);
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721Upgradeable) {
