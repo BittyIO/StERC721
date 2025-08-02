@@ -88,7 +88,7 @@ contract StERC721Test is Test {
         stERC721_A.mint(tokenIds);
 
         assertEq(stERC721_A.ownerOf(tokenId), user);
-        assertEq(mockERC721_A.ownerOf(tokenId), address(registry.get(user)));
+        assertEq(mockERC721_A.ownerOf(tokenId), address(registry.getAssetVault(user)));
         vm.stopPrank();
     }
 
@@ -104,7 +104,7 @@ contract StERC721Test is Test {
         stERC721_A.safeTransferFrom(user, owner, tokenId);
         vm.stopPrank();
 
-        address assetVault = address(registry.get(owner));
+        address assetVault = address(registry.getAssetVault(owner));
         assertEq(stERC721_A.ownerOf(tokenId), owner);
         assertEq(mockERC721_A.ownerOf(tokenId), assetVault);
     }
@@ -257,7 +257,7 @@ contract StERC721Test is Test {
         tokenIdsA[0] = tokenIdA;
         stERC721_A.mint(tokenIdsA);
         assertEq(stERC721_A.ownerOf(tokenIdA), testUser);
-        assertEq(mockERC721_A.ownerOf(tokenIdA), address(registry.get(testUser)));
+        assertEq(mockERC721_A.ownerOf(tokenIdA), address(registry.getAssetVault(testUser)));
         vm.stopPrank();
 
         // mint mockERC721_B
@@ -268,7 +268,7 @@ contract StERC721Test is Test {
         tokenIdsB[0] = tokenIdB;
         stERC721_B.mint(tokenIdsB);
         assertEq(stERC721_B.ownerOf(tokenIdB), testUser);
-        assertEq(mockERC721_B.ownerOf(tokenIdB), address(registry.get(testUser)));
+        assertEq(mockERC721_B.ownerOf(tokenIdB), address(registry.getAssetVault(testUser)));
         vm.stopPrank();
 
         // burn mockERC721_A
@@ -298,7 +298,7 @@ contract StERC721Test is Test {
         stERC721_A.mint(tokenIds);
         vm.stopPrank();
 
-        address vault = address(registry.get(user));
+        address vault = address(registry.getAssetVault(user));
 
         address[] memory delegates = new address[](2);
         delegates[0] = makeAddr("delegate1");

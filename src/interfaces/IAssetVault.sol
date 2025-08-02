@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.29;
 
+import {IClaimAirdropStrategy} from "./IClaimAirdropStrategy.sol";
+
 interface IAssetVault {
     function disableInitializers() external;
 
@@ -14,15 +16,20 @@ interface IAssetVault {
 
     function getDelegateCashForTokenV2(address erc721_, uint256 tokenId_) external view returns (address[] memory);
 
-    function withdrawERC721(address to_, address erc721_, uint256 tokenId_) external;
+    function isERC721Staked(address erc721_, uint256 tokenId_) external view returns (bool);
 
-    function withdrawERC20(address to_, address token_, uint256 amount_) external;
+    function stakeERC721(address erc721_, uint256 tokenId_) external;
 
-    function withdrawERC1155(
-        address token,
-        address to,
-        uint256[] calldata ids,
-        uint256[] calldata amounts,
-        bytes calldata data
-    ) external;
+    function unstakeERC721(address erc721_, uint256 tokenId_) external;
+
+    function transferERC721(address to_, address erc721_, uint256 tokenId_) external;
+
+    function transferNonStakedERC721(address to_, address erc721_, uint256 tokenId_) external;
+
+    function transferERC20(address to_, address token_, uint256 amount_) external;
+
+    function transferERC1155(address to_, address token_, uint256 id_, uint256 amount_, bytes calldata data_)
+        external;
+
+    function delegateCall(address target_, bytes memory data_) external returns (bytes memory);
 }
