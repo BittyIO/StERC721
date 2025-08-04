@@ -68,6 +68,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             _erc721.safeTransferFrom(staker_, address(assetVault_), tokenId_);
+            assetVaultRegistry.stakedERC721(staker_, address(_erc721), tokenId_);
             _safeMint(staker_, tokenId_);
         }
         emit Minted(staker_, tokenIds_);
@@ -88,18 +89,17 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             require(staker_ == ownerOf(tokenId_), "StERC721: only owner can burn");
-            assetVault_ = assetVaultRegistry.get(staker_);
+            assetVault_ = assetVaultRegistry.getAssetVault(staker_);
             require(assetVault_ != address(0), "StERC721: asset vault not found");
             require(assetVault_ == _erc721.ownerOf(tokenId_), "StERC721: invalid tokenId");
             _burn(tokenId_);
-            assetVaultRegistry.withdrawERC721(staker_, receiver_, address(_erc721), tokenId_);
+            assetVaultRegistry.unstakeERC721(staker_, receiver_, address(_erc721), tokenId_);
         }
         emit Burned(staker_, receiver_, tokenIds_);
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721Upgradeable) {
-        address assetVaultTo_ = assetVaultRegistry.create(to);
-        assetVaultRegistry.withdrawERC721(from, assetVaultTo_, address(_erc721), tokenId);
+        assetVaultRegistry.transferERC721(from, to, address(_erc721), tokenId);
         super.transferFrom(from, to, tokenId);
     }
 
@@ -160,7 +160,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     {
         delegates = new address[][](tokenIds_.length);
         for (uint256 i = 0; i < tokenIds_.length; i++) {
-            address assetVault_ = assetVaultRegistry.get(ownerOf(tokenIds_[i]));
+            address assetVault_ = assetVaultRegistry.getAssetVault(ownerOf(tokenIds_[i]));
             if (assetVault_ == address(0)) {
                 continue;
             }

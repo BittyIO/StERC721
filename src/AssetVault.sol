@@ -9,14 +9,36 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IClaimAirdropStrategy} from "./interfaces/IClaimAirdropStrategy.sol";
 import {IDelegateRegistryV2} from "./interfaces/IDelegateRegistryV2.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
 
 contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUpgradeable {
     using SafeERC20 for IERC20;
+    using Address for address;
+    using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     IDelegateRegistryV2 public delegationRegistryV2;
+    EnumerableSet.AddressSet private _stakedERC721;
+    mapping(address => EnumerableSet.UintSet) private _stakedERC721TokenIds;
+
+    modifier keepStaked() {
+        _;
+        uint256 erc721Length = _stakedERC721.length();
+        for (uint256 i = 0; i < erc721Length; i++) {
+            address erc721 = _stakedERC721.at(i);
+            uint256 tokenIdLength = _stakedERC721TokenIds[erc721].length();
+            for (uint256 j = 0; j < tokenIdLength; j++) {
+                uint256 tokenId = _stakedERC721TokenIds[erc721].at(j);
+                require(
+                    IERC721(erc721).ownerOf(tokenId) == address(this), "AssetVault: ERC721 is not staked in this vault"
+                );
+            }
+        }
+    }
 
     function disableInitializers() external override {
         _disableInitializers();
@@ -71,22 +93,57 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
         }
     }
 
-    function withdrawERC721(address to_, address erc721_, uint256 tokenId_) external override onlyOwner {
+    function isERC721Staked(address erc721_, uint256 tokenId_) external view override returns (bool) {
+        return _stakedERC721.contains(erc721_) && _stakedERC721TokenIds[erc721_].contains(tokenId_);
+    }
+
+    function stakeERC721(address erc721_, uint256 tokenId_) external override onlyOwner {
+        require(IERC721(erc721_).ownerOf(tokenId_) == address(this), "AssetVault: ERC721 is not owned by this vault");
+        _stakedERC721.add(erc721_);
+        _stakedERC721TokenIds[erc721_].add(tokenId_);
+    }
+
+    function unstakeERC721(address erc721_, uint256 tokenId_) external override onlyOwner {
+        require(IERC721(erc721_).ownerOf(tokenId_) != address(this), "AssetVault: ERC721 is still owned by this vault");
+        _stakedERC721TokenIds[erc721_].remove(tokenId_);
+        if (_stakedERC721TokenIds[erc721_].length() == 0) {
+            _stakedERC721.remove(erc721_);
+        }
+    }
+
+    function transferERC721(address to_, address erc721_, uint256 tokenId_) external override onlyOwner {
         IERC721(erc721_).safeTransferFrom(address(this), to_, tokenId_);
     }
 
-    function withdrawERC20(address to_, address token_, uint256 amount_) external override onlyOwner {
+    function transferNonStakedERC721(address to_, address erc721_, uint256 tokenId_)
+        external
+        override
+        onlyOwner
+        keepStaked
+    {
+        IERC721(erc721_).safeTransferFrom(address(this), to_, tokenId_);
+    }
+
+    function transferERC20(address to_, address token_, uint256 amount_) external override onlyOwner {
         IERC20(token_).safeTransfer(to_, amount_);
     }
 
-    function withdrawERC1155(
-        address token,
-        address to,
-        uint256[] calldata ids,
-        uint256[] calldata amounts,
-        bytes calldata data
-    ) external override onlyOwner {
-        IERC1155(token).safeBatchTransferFrom(address(this), to, ids, amounts, data);
+    function transferERC1155(address to_, address token_, uint256 id_, uint256 amount_, bytes calldata data_)
+        external
+        override
+        onlyOwner
+    {
+        IERC1155(token_).safeTransferFrom(address(this), to_, id_, amount_, data_);
+    }
+
+    function delegateCall(address target, bytes memory data)
+        external
+        override
+        onlyOwner
+        keepStaked
+        returns (bytes memory)
+    {
+        return target.functionDelegateCall(data);
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {

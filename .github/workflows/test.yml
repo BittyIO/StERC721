@@ -51,7 +51,7 @@ jobs:
 
       - name: Run Forge coverage
         run: |
-          forge coverage --no-match-coverage 'test|node_modules|script' --report lcov
+          forge coverage --ir-minimum --no-match-coverage 'test|node_modules|script' --report lcov
         id: coverage
 
       - uses: codecov/codecov-action@v5
