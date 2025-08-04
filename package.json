@@ -6,7 +6,7 @@
   },
   "scripts": {
     "test": "forge test -vvv",
-    "coverage": "forge coverage --ir-minimum --no-match-coverage 'test|node_modules' --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage --ignore-errors inconsistent",
+    "coverage": "rm -rf ./coverage && forge coverage --ir-minimum --no-match-coverage 'test|node_modules|script' --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage --ignore-errors inconsistent",
     "deploy:sepolia": "source .env && forge script script/deploy.sol:DeployScript --chain sepolia --rpc-url $SEPOLIA_RPC_URL --slow --broadcast --verify -vvv --interactives 1 && npx tsx script/deplyment.ts --network sepolia"
   }
 }
