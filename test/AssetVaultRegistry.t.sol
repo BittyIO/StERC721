@@ -414,6 +414,8 @@ contract AssetVaultRegistryTest is Test {
         vm.prank(authorizedAddress);
         address vault = registry.create(user);
 
+        address recipient = makeAddr("recipient");
+
         // Deploy a mock ERC20, ERC721, and ERC1155 token
         MintableERC20 mockERC20 = new MintableERC20("TestToken", "TT", 18);
         MintableERC721 mockERC721 = new MintableERC721("TestNFT", "TNFT");
@@ -447,33 +449,47 @@ contract AssetVaultRegistryTest is Test {
             airdropContract, address(registry), erc20ProofTokens, erc721ProofTokens, erc1155ProofTokens
         );
 
+        vm.prank(owner);
+        registry.addClaimAirdropStrategy(address(strategy));
+
+        bytes memory data = abi.encode(erc721AirdropTokenId);
+
         // Prepare proofAsset struct
         AssetVaultRegistry.ProofAsset memory proofAsset;
         proofAsset.erc20Tokens = new address[](1);
         proofAsset.erc20Tokens[0] = address(mockERC20);
+
+        vm.prank(user);
+        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
+
         proofAsset.erc20Amounts = new uint256[](1);
         proofAsset.erc20Amounts[0] = erc20Amount;
 
         proofAsset.erc721Tokens = new address[](1);
         proofAsset.erc721Tokens[0] = address(mockERC721);
+
+        vm.prank(user);
+        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
         proofAsset.erc721TokenIds = new uint256[](1);
         proofAsset.erc721TokenIds[0] = erc721TokenId;
 
         proofAsset.erc1155Tokens = new address[](1);
         proofAsset.erc1155Tokens[0] = address(mockERC1155);
+
+        vm.prank(user);
+        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
         proofAsset.erc1155TokenIds = new uint256[](1);
         proofAsset.erc1155TokenIds[0] = erc1155TokenId;
+
+        vm.prank(user);
+        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
         proofAsset.erc1155TokenAmounts = new uint256[](1);
         proofAsset.erc1155TokenAmounts[0] = erc1155Amount;
 
-        // Prepare data for the strategy (encode erc721AirdropTokenId)
-        bytes memory data = abi.encode(erc721AirdropTokenId);
-
-        // The owner calls claimAirdrop
-        address recipient = makeAddr("recipient");
-
-        vm.prank(owner);
-        registry.addClaimAirdropStrategy(address(strategy));
         vm.prank(user);
         registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
 

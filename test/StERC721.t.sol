@@ -16,6 +16,8 @@ import {ERC721EnumerableUpgradeable} from
 import {IStERC721} from "../src/interfaces/IStERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
+import {console2} from "forge-std/console2.sol";
+
 contract StERC721Test is Test {
     using Strings for uint256;
 
@@ -117,8 +119,17 @@ contract StERC721Test is Test {
         vm.startPrank(user);
         mockERC721_A.mint(user, tokenId);
         mockERC721_A.setApprovalForAll(address(stERC721_A), true);
-
         stERC721_A.mint(tokenIds);
+        vm.stopPrank();
+
+        address user2 = makeAddr("user2");
+        vm.startPrank(user2);
+        mockERC721_A.setApprovalForAll(address(stERC721_A), true);
+        vm.expectRevert("StERC721: only owner can burn");
+        stERC721_A.burn(tokenIds);
+        vm.stopPrank();
+
+        vm.startPrank(user);
         stERC721_A.burn(tokenIds);
 
         assertEq(mockERC721_A.ownerOf(tokenId), user);
@@ -157,15 +168,22 @@ contract StERC721Test is Test {
         vm.startPrank(user);
         mockERC721_A.mint(user, tokenId);
         mockERC721_A.setApprovalForAll(address(stERC721_A), true);
-
         stERC721_A.mint(tokenIds);
-        bytes32 expectedDelegationHash = bytes32("DELEGATION_HASH");
+        vm.stopPrank();
 
+        address user2 = makeAddr("user2");
+        vm.startPrank(user2);
+        vm.expectRevert("StERC721: only owner can delegate");
+        stERC721_A.setDelegateCashV2(delegate, tokenIds, rights, true);
+        vm.stopPrank();
+
+        bytes32 expectedDelegationHash = bytes32("DELEGATION_HASH");
         vm.mockCall(
             address(delegationRegistry),
             abi.encodeWithSelector(IDelegateRegistryV2.delegateERC721.selector),
             abi.encode(expectedDelegationHash)
         );
+        vm.startPrank(user);
         bytes32[] memory delegationHashes = stERC721_A.setDelegateCashV2(delegate, tokenIds, rights, true);
         for (uint256 i = 0; i < delegationHashes.length; i++) {
             assertEq(delegationHashes[i], expectedDelegationHash);

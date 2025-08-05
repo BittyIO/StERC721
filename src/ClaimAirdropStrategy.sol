@@ -19,15 +19,12 @@ abstract contract ClaimAirdropStrategy is ERC165, IClaimAirdropStrategy {
     ) {
         assetVaultRegistry = assetVaultRegistry_;
         for (uint256 i = 0; i < erc20ProofTokens_.length; i++) {
-            require(erc20ProofTokens_[i] != address(0), "ClaimAirdropStrategy: erc20 proof token is zero address");
             IERC20(erc20ProofTokens_[i]).approve(assetVaultRegistry_, type(uint256).max);
         }
         for (uint256 i = 0; i < erc721ProofTokens_.length; i++) {
-            require(erc721ProofTokens_[i] != address(0), "ClaimAirdropStrategy: erc721 proof token is zero address");
             IERC721(erc721ProofTokens_[i]).setApprovalForAll(assetVaultRegistry_, true);
         }
         for (uint256 i = 0; i < erc1155ProofTokens_.length; i++) {
-            require(erc1155ProofTokens_[i] != address(0), "ClaimAirdropStrategy: erc1155 proof token is zero address");
             IERC1155(erc1155ProofTokens_[i]).setApprovalForAll(assetVaultRegistry_, true);
         }
     }
