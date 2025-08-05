@@ -90,8 +90,6 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
             tokenId_ = tokenIds_[i];
             require(staker_ == ownerOf(tokenId_), "StERC721: only owner can burn");
             assetVault_ = assetVaultRegistry.getAssetVault(staker_);
-            require(assetVault_ != address(0), "StERC721: asset vault not found");
-            require(assetVault_ == _erc721.ownerOf(tokenId_), "StERC721: invalid tokenId");
             _burn(tokenId_);
             assetVaultRegistry.unstakeERC721(staker_, receiver_, address(_erc721), tokenId_);
         }
@@ -161,9 +159,6 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         delegates = new address[][](tokenIds_.length);
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             address assetVault_ = assetVaultRegistry.getAssetVault(ownerOf(tokenIds_[i]));
-            if (assetVault_ == address(0)) {
-                continue;
-            }
             delegates[i] = IAssetVault(assetVault_).getDelegateCashForTokenV2(address(_erc721), tokenIds_[i]);
         }
     }
