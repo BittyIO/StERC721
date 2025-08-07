@@ -15,7 +15,7 @@ import {ERC721EnumerableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {IStERC721} from "../src/interfaces/IStERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-
+import {InvalidERC721, InvalidERC721Owner} from "../src/interfaces/IErrors.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract StERC721Test is Test {
@@ -125,7 +125,7 @@ contract StERC721Test is Test {
         address user2 = makeAddr("user2");
         vm.startPrank(user2);
         mockERC721_A.setApprovalForAll(address(stERC721_A), true);
-        vm.expectRevert("StERC721: only owner can burn");
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Owner.selector, address(mockERC721_A), tokenId));
         stERC721_A.burn(tokenIds);
         vm.stopPrank();
 
@@ -173,7 +173,7 @@ contract StERC721Test is Test {
 
         address user2 = makeAddr("user2");
         vm.startPrank(user2);
-        vm.expectRevert("StERC721: only owner can delegate");
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Owner.selector, address(mockERC721_A), tokenId));
         stERC721_A.setDelegateCashV2(delegate, tokenIds, rights, true);
         vm.stopPrank();
 
@@ -371,14 +371,9 @@ contract StERC721Test is Test {
     }
 
     function test_onERC721Received_revertsIfNotFromUnderlying() public {
-        address staker = user;
         uint256 tokenId = 43;
-        // Mint token to staker
-        vm.startPrank(staker);
-        mockERC721_A.mint(staker, tokenId);
-        vm.stopPrank();
-        vm.expectRevert("StERC721: erc721 not acceptable");
-        stERC721_A.onERC721Received(address(mockERC721_A), staker, tokenId, "");
-        vm.stopPrank();
+        address staker = makeAddr("staker");
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721.selector, address(mockERC721_A)));
+        mockERC721_A.safeMint(address(stERC721_B), tokenId);
     }
 }

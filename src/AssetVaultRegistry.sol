@@ -14,6 +14,13 @@ import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
 import {IClaimAirdropStrategy} from "./interfaces/IClaimAirdropStrategy.sol";
 import {IExecuteAirdropStrategy} from "./interfaces/IExecuteAirdropStrategy.sol";
+import {
+    InvalidAddress,
+    InvalidCaller,
+    InvalidStrategy,
+    AssetVaultNotFound,
+    InvalidProofAsset
+} from "./interfaces/IErrors.sol";
 
 contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     using Clones for address;
@@ -31,17 +38,23 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     address public delegationRegistryV2;
 
     modifier onlyAuthorized() {
-        require(authorized[msg.sender], "AssetVaultRegistry: caller not authorized");
+        if (!authorized[msg.sender]) {
+            revert InvalidCaller(msg.sender);
+        }
         _;
     }
 
     modifier onlyClaimAirdropStrategy(address strategy_) {
-        require(claimAirdropStrategies.contains(strategy_), "AssetVaultRegistry: invalid strategy");
+        if (!claimAirdropStrategies.contains(strategy_)) {
+            revert InvalidStrategy(strategy_);
+        }
         _;
     }
 
     modifier onlyExecuteAirdropStrategy(address strategy_) {
-        require(executeAirdropStrategies.contains(strategy_), "AssetVaultRegistry: invalid strategy");
+        if (!executeAirdropStrategies.contains(strategy_)) {
+            revert InvalidStrategy(strategy_);
+        }
         _;
     }
 
@@ -56,7 +69,9 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     }
 
     function authorize(address authorizedAddress_) external override onlyOwner {
-        require(authorizedAddress_ != address(0), "AssetVaultRegistry: authorized address is zero address");
+        if (authorizedAddress_ == address(0)) {
+            revert InvalidAddress(authorizedAddress_);
+        }
         authorized[authorizedAddress_] = true;
     }
 
@@ -65,11 +80,12 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     }
 
     function addClaimAirdropStrategy(address strategy_) external override onlyOwner {
-        require(strategy_ != address(0), "AssetVaultRegistry: strategy is zero address");
-        require(
-            strategy_.supportsInterface(type(IClaimAirdropStrategy).interfaceId),
-            "AssetVaultRegistry: strategy is not IClaimAirdropStrategy"
-        );
+        if (strategy_ == address(0)) {
+            revert InvalidAddress(strategy_);
+        }
+        if (!strategy_.supportsInterface(type(IClaimAirdropStrategy).interfaceId)) {
+            revert InvalidStrategy(strategy_);
+        }
         claimAirdropStrategies.add(strategy_);
     }
 
@@ -78,11 +94,12 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     }
 
     function addExecuteAirdropStrategy(address strategy_) external override onlyOwner {
-        require(strategy_ != address(0), "AssetVaultRegistry: strategy is zero address");
-        require(
-            strategy_.supportsInterface(type(IExecuteAirdropStrategy).interfaceId),
-            "AssetVaultRegistry: strategy is not IExecuteAirdropStrategy"
-        );
+        if (strategy_ == address(0)) {
+            revert InvalidAddress(strategy_);
+        }
+        if (!strategy_.supportsInterface(type(IExecuteAirdropStrategy).interfaceId)) {
+            revert InvalidStrategy(strategy_);
+        }
         executeAirdropStrategies.add(strategy_);
     }
 
@@ -95,7 +112,9 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     }
 
     function _create(address owner_) internal returns (address assetVault) {
-        require(owner_ != address(0), "AssetVaultRegistry: owner is zero address");
+        if (owner_ == address(0)) {
+            revert InvalidAddress(owner_);
+        }
         IAssetVault assetVault_ = assetVaults[owner_];
         if (address(assetVault_) == address(0)) {
             assetVault_ = IAssetVault(assetVaultImpl.clone());
@@ -114,9 +133,10 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     }
 
     function _getAssetVault(address owner_) internal view returns (IAssetVault assetVault) {
-        IAssetVault ownerAssetVault_ = assetVaults[owner_];
-        require(address(ownerAssetVault_) != address(0), "AssetVaultRegistry: owner's asset vault not found");
-        return ownerAssetVault_;
+        assetVault = assetVaults[owner_];
+        if (address(assetVault) == address(0)) {
+            revert AssetVaultNotFound(owner_);
+        }
     }
 
     function setDelegateCashV2(
@@ -182,18 +202,18 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
     {
         address owner_ = msg.sender;
         IAssetVault ownerAssetVault_ = _getAssetVault(owner_);
-        require(
-            proofAsset_.erc20Tokens.length == proofAsset_.erc20Amounts.length, "AssetVaultRegistry: invalid proof asset"
-        );
-        require(
-            proofAsset_.erc721Tokens.length == proofAsset_.erc721TokenIds.length,
-            "AssetVaultRegistry: invalid proof asset"
-        );
-        require(
-            proofAsset_.erc1155Tokens.length == proofAsset_.erc1155TokenIds.length
-                && proofAsset_.erc1155Tokens.length == proofAsset_.erc1155TokenAmounts.length,
-            "AssetVaultRegistry: invalid proof asset"
-        );
+        if (proofAsset_.erc20Tokens.length != proofAsset_.erc20Amounts.length) {
+            revert InvalidProofAsset();
+        }
+        if (proofAsset_.erc721Tokens.length != proofAsset_.erc721TokenIds.length) {
+            revert InvalidProofAsset();
+        }
+        if (
+            proofAsset_.erc1155Tokens.length != proofAsset_.erc1155TokenIds.length
+                || proofAsset_.erc1155Tokens.length != proofAsset_.erc1155TokenAmounts.length
+        ) {
+            revert InvalidProofAsset();
+        }
         // Transfer assets to strategy
         for (uint256 i = 0; i < proofAsset_.erc20Tokens.length; i++) {
             ownerAssetVault_.transferERC20(strategy_, proofAsset_.erc20Tokens[i], proofAsset_.erc20Amounts[i]);
