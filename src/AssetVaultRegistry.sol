@@ -208,8 +208,9 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
         if (proofAsset_.erc721Tokens.length != proofAsset_.erc721TokenIds.length) {
             revert InvalidProofAsset();
         }
-        if (proofAsset_.erc1155Tokens.length != proofAsset_.erc1155TokenIds.length
-            || proofAsset_.erc1155Tokens.length != proofAsset_.erc1155TokenAmounts.length
+        if (
+            proofAsset_.erc1155Tokens.length != proofAsset_.erc1155TokenIds.length
+                || proofAsset_.erc1155Tokens.length != proofAsset_.erc1155TokenAmounts.length
         ) {
             revert InvalidProofAsset();
         }
