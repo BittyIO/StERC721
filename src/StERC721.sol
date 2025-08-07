@@ -17,6 +17,7 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IStERC721} from "./interfaces/IStERC721.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
+import {InvalidERC721, InvalidERC721Owner} from "./interfaces/IErrors.sol";
 
 contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC721EnumerableUpgradeable {
     using Clones for address;
@@ -57,7 +58,9 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external view override returns (bytes4) {
-        require(msg.sender == address(_erc721), "StERC721: erc721 not acceptable");
+        if (msg.sender != address(_erc721)) {
+            revert InvalidERC721(msg.sender);
+        }
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -88,7 +91,9 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         address assetVault_;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
-            require(staker_ == ownerOf(tokenId_), "StERC721: only owner can burn");
+            if (staker_ != ownerOf(tokenId_)) {
+                revert InvalidERC721Owner(address(_erc721), tokenId_);
+            }
             assetVault_ = assetVaultRegistry.getAssetVault(staker_);
             _burn(tokenId_);
             assetVaultRegistry.unstakeERC721(staker_, receiver_, address(_erc721), tokenId_);
@@ -143,7 +148,9 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
             tokenOwner_ = ownerOf(tokenId_);
-            require(msg.sender == tokenOwner_, "StERC721: only owner can delegate");
+            if (msg.sender != tokenOwner_) {
+                revert InvalidERC721Owner(address(_erc721), tokenId_);
+            }
             delegationHashes[i] = assetVaultRegistry.setDelegateCashV2(
                 tokenOwner_, delegate_, address(_erc721), tokenId_, rights_, value_
             );

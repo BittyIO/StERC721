@@ -14,6 +14,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IClaimAirdropStrategy} from "./interfaces/IClaimAirdropStrategy.sol";
 import {IDelegateRegistryV2} from "./interfaces/IDelegateRegistryV2.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
+import {MissingStakedERC721, InvalidAddress, InvalidERC721Owner} from "./interfaces/IErrors.sol";
 
 contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -33,9 +34,9 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
             uint256 tokenIdLength = _stakedERC721TokenIds[erc721].length();
             for (uint256 j = 0; j < tokenIdLength; j++) {
                 uint256 tokenId = _stakedERC721TokenIds[erc721].at(j);
-                require(
-                    IERC721(erc721).ownerOf(tokenId) == address(this), "AssetVault: ERC721 is not staked in this vault"
-                );
+                if (IERC721(erc721).ownerOf(tokenId) != address(this)) {
+                    revert MissingStakedERC721(erc721);
+                }
             }
         }
     }
@@ -64,7 +65,9 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
         onlyOwner
         returns (bytes32 delegationHash)
     {
-        require(delegate_ != address(0), "AssetVault: invalid delegate");
+        if (delegate_ == address(0)) {
+            revert InvalidAddress(delegate_);
+        }
         return delegationRegistryV2.delegateERC721(delegate_, erc721_, tokenId_, rights_, value_);
     }
 
@@ -98,13 +101,17 @@ contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUp
     }
 
     function stakeERC721(address erc721_, uint256 tokenId_) external override onlyOwner {
-        require(IERC721(erc721_).ownerOf(tokenId_) == address(this), "AssetVault: ERC721 is not owned by this vault");
+        if (IERC721(erc721_).ownerOf(tokenId_) != address(this)) {
+            revert InvalidERC721Owner(erc721_, tokenId_);
+        }
         _stakedERC721.add(erc721_);
         _stakedERC721TokenIds[erc721_].add(tokenId_);
     }
 
     function unstakeERC721(address erc721_, uint256 tokenId_) external override onlyOwner {
-        require(IERC721(erc721_).ownerOf(tokenId_) != address(this), "AssetVault: ERC721 is still owned by this vault");
+        if (IERC721(erc721_).ownerOf(tokenId_) == address(this)) {
+            revert InvalidERC721Owner(erc721_, tokenId_);
+        }
         _stakedERC721TokenIds[erc721_].remove(tokenId_);
         if (_stakedERC721TokenIds[erc721_].length() == 0) {
             _stakedERC721.remove(erc721_);

@@ -14,6 +14,15 @@ import {MockAirdropContractForCurrentOwner} from "./mock/MockAirdropContract.sol
 import {MockClaimAirdropStrategy} from "./mock/MockClaimAirdropStrategy.sol";
 import {MockExecuteAirdropStrategy} from "./mock/MockExecuteAirdropStrategy.sol";
 import {MockAirdropContractForFixedOwner} from "./mock/MockAirdropContract.sol";
+import {MissingStakedERC721} from "../src/interfaces/IErrors.sol";
+
+import {
+    InvalidAddress,
+    InvalidCaller,
+    InvalidStrategy,
+    AssetVaultNotFound,
+    InvalidProofAsset
+} from "../src/interfaces/IErrors.sol";
 
 contract AssetVaultRegistryTest is Test {
     AssetVaultRegistry public registry;
@@ -60,6 +69,12 @@ contract AssetVaultRegistryTest is Test {
         registry.authorize(authorizedAddress);
     }
 
+    function testRevokeAuthorization() public {
+        vm.prank(owner);
+        registry.revokeAuthorize(authorizedAddress);
+        assertEq(registry.isAuthorized(authorizedAddress), false);
+    }
+
     function testCreate() public {
         vm.prank(authorizedAddress);
         address vault = registry.create(owner);
@@ -69,14 +84,14 @@ contract AssetVaultRegistryTest is Test {
 
     function testCreateWithZeroAddress() public {
         vm.prank(authorizedAddress);
-        vm.expectRevert("AssetVaultRegistry: owner is zero address");
+        vm.expectRevert(abi.encodeWithSelector(InvalidAddress.selector, address(0)));
         registry.create(address(0));
     }
 
     function testCreateWithNonAuthorizedOwner() public {
         address nonAuthorized = address(0x1234);
         vm.prank(nonAuthorized);
-        vm.expectRevert("AssetVaultRegistry: caller not authorized");
+        vm.expectRevert(abi.encodeWithSelector(InvalidCaller.selector, nonAuthorized));
         registry.create(owner);
     }
 
@@ -87,13 +102,13 @@ contract AssetVaultRegistryTest is Test {
     }
 
     function testGetNonExistentAssetVault() public {
-        vm.expectRevert("AssetVaultRegistry: owner's asset vault not found");
+        vm.expectRevert(abi.encodeWithSelector(AssetVaultNotFound.selector, owner));
         registry.getAssetVault(owner);
     }
 
     function testAuthorizeZeroAddress() public {
         vm.prank(owner);
-        vm.expectRevert("AssetVaultRegistry: authorized address is zero address");
+        vm.expectRevert(abi.encodeWithSelector(InvalidAddress.selector, address(0)));
         registry.authorize(address(0));
     }
 
@@ -162,7 +177,7 @@ contract AssetVaultRegistryTest is Test {
         // Try to transfer the NFT from owner1's vault to owner2's vault via a non-authorized address
         address nonAuthorized = address(0x1234);
         vm.prank(nonAuthorized);
-        vm.expectRevert("AssetVaultRegistry: caller not authorized");
+        vm.expectRevert(abi.encodeWithSelector(InvalidCaller.selector, nonAuthorized));
         registry.transferERC721(owner1, owner2, address(mockERC721), tokenId);
     }
 
@@ -189,7 +204,7 @@ contract AssetVaultRegistryTest is Test {
         // Non-authorized address cannot call stakedERC721
         address nonAuthorized = address(0x1234);
         vm.prank(nonAuthorized);
-        vm.expectRevert("AssetVaultRegistry: caller not authorized");
+        vm.expectRevert(abi.encodeWithSelector(InvalidCaller.selector, nonAuthorized));
         registry.stakedERC721(owner, address(mockERC721), tokenId);
 
         // The authorized address calls stakedERC721, staking the NFT
@@ -223,7 +238,7 @@ contract AssetVaultRegistryTest is Test {
         // check a non-authorized address cannot call withdrawERC721
         address nonAuthorized = address(0x1234);
         vm.prank(nonAuthorized);
-        vm.expectRevert("AssetVaultRegistry: caller not authorized");
+        vm.expectRevert(abi.encodeWithSelector(InvalidCaller.selector, nonAuthorized));
         registry.unstakeERC721(owner, owner, address(mockERC721), tokenId);
 
         // the authorized address call withdrawERC721, transfer the NFT back to owner
@@ -262,7 +277,7 @@ contract AssetVaultRegistryTest is Test {
         // Check that a non-authorized address cannot call setDelegateCashV2
         address nonAuthorized = address(0x1234);
         vm.prank(nonAuthorized);
-        vm.expectRevert("AssetVaultRegistry: caller not authorized");
+        vm.expectRevert(abi.encodeWithSelector(InvalidCaller.selector, nonAuthorized));
         registry.setDelegateCashV2(owner, delegate, address(mockERC721), tokenId, rights, true);
     }
 
@@ -311,7 +326,7 @@ contract AssetVaultRegistryTest is Test {
 
         // The owner tries to claim the staked ERC721 token from the vault, should revert
         vm.prank(owner);
-        vm.expectRevert("AssetVault: ERC721 is not staked in this vault");
+        vm.expectRevert(abi.encodeWithSelector(MissingStakedERC721.selector, address(mockERC721)));
         registry.claimERC721(recipient, address(mockERC721), tokenIdStaked);
     }
 
@@ -347,11 +362,11 @@ contract AssetVaultRegistryTest is Test {
 
         // Zero address should revert
         vm.prank(owner);
-        vm.expectRevert("AssetVaultRegistry: strategy is zero address");
+        vm.expectRevert(abi.encodeWithSelector(InvalidAddress.selector, address(0)));
         registry.addClaimAirdropStrategy(address(0));
 
         vm.prank(owner);
-        vm.expectRevert("AssetVaultRegistry: strategy is not IClaimAirdropStrategy");
+        vm.expectRevert(abi.encodeWithSelector(InvalidStrategy.selector, strategy));
         registry.addClaimAirdropStrategy(strategy);
 
         // Deploy a valid mock strategy
@@ -459,8 +474,8 @@ contract AssetVaultRegistryTest is Test {
         proofAsset.erc20Tokens = new address[](1);
         proofAsset.erc20Tokens[0] = address(mockERC20);
 
-        vm.prank(user);
-        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(InvalidProofAsset.selector));
         registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
 
         proofAsset.erc20Amounts = new uint256[](1);
@@ -469,8 +484,7 @@ contract AssetVaultRegistryTest is Test {
         proofAsset.erc721Tokens = new address[](1);
         proofAsset.erc721Tokens[0] = address(mockERC721);
 
-        vm.prank(user);
-        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        vm.expectRevert(abi.encodeWithSelector(InvalidProofAsset.selector));
         registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
         proofAsset.erc721TokenIds = new uint256[](1);
         proofAsset.erc721TokenIds[0] = erc721TokenId;
@@ -478,20 +492,22 @@ contract AssetVaultRegistryTest is Test {
         proofAsset.erc1155Tokens = new address[](1);
         proofAsset.erc1155Tokens[0] = address(mockERC1155);
 
-        vm.prank(user);
-        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        vm.expectRevert(abi.encodeWithSelector(InvalidProofAsset.selector));
         registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
         proofAsset.erc1155TokenIds = new uint256[](1);
         proofAsset.erc1155TokenIds[0] = erc1155TokenId;
 
-        vm.prank(user);
-        vm.expectRevert("AssetVaultRegistry: invalid proof asset");
+        vm.expectRevert(abi.encodeWithSelector(InvalidProofAsset.selector));
         registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
         proofAsset.erc1155TokenAmounts = new uint256[](1);
         proofAsset.erc1155TokenAmounts[0] = erc1155Amount;
 
-        vm.prank(user);
+        address invalidStrategy = makeAddr("invalidStrategy");
+        vm.expectRevert(abi.encodeWithSelector(InvalidStrategy.selector, invalidStrategy));
+        registry.claimAirdrop(recipient, invalidStrategy, proofAsset, data);
+
         registry.claimAirdrop(recipient, address(strategy), proofAsset, data);
+        vm.stopPrank();
 
         // Check that the ERC20, ERC721, and ERC1155 assets are returned to the vault
         assertEq(mockERC20.balanceOf(vault), erc20Amount);
@@ -512,11 +528,11 @@ contract AssetVaultRegistryTest is Test {
 
         // Zero address should revert
         vm.prank(owner);
-        vm.expectRevert("AssetVaultRegistry: strategy is zero address");
+        vm.expectRevert(abi.encodeWithSelector(InvalidAddress.selector, address(0)));
         registry.addExecuteAirdropStrategy(address(0));
 
         vm.prank(owner);
-        vm.expectRevert("AssetVaultRegistry: strategy is not IExecuteAirdropStrategy");
+        vm.expectRevert(abi.encodeWithSelector(InvalidStrategy.selector, strategy));
         registry.addExecuteAirdropStrategy(strategy);
 
         MockExecuteAirdropStrategy validStrategy = new MockExecuteAirdropStrategy();
@@ -568,8 +584,12 @@ contract AssetVaultRegistryTest is Test {
 
         vm.prank(owner);
         registry.addExecuteAirdropStrategy(address(strategy));
-        vm.prank(user);
+        vm.startPrank(user);
+        address invalidStrategy = makeAddr("invalidStrategy");
+        vm.expectRevert(abi.encodeWithSelector(InvalidStrategy.selector, invalidStrategy));
+        registry.executeAirdrop(recipient, invalidStrategy, data);
         registry.executeAirdrop(recipient, address(strategy), data);
+        vm.stopPrank();
 
         assertEq(mockERC721.ownerOf(erc721TokenId), vault);
 

@@ -10,6 +10,7 @@ import {AssetVault} from "../src/AssetVault.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IAssetVaultRegistry} from "../src/interfaces/IAssetVaultRegistry.sol";
 import {UpgradeableProxy} from "../src/UpgradeableProxy.sol";
+import {StERC721AlreadyExists, InvalidAddress, StERC721NotExists} from "../src/interfaces/IErrors.sol";
 
 contract StERC721RegistryTest is Test {
     // bytes32 internal constant IMPL_SLOT = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
@@ -130,7 +131,7 @@ contract StERC721RegistryTest is Test {
         vm.startPrank(owner);
         registry.createStERC721(address(erc721), address(implementation));
 
-        vm.expectRevert("StERC721Registry: asset exist");
+        vm.expectRevert(abi.encodeWithSelector(StERC721AlreadyExists.selector, address(erc721)));
         registry.createStERC721(address(erc721), address(implementation));
         vm.stopPrank();
     }
@@ -139,7 +140,7 @@ contract StERC721RegistryTest is Test {
         MintableERC721 erc721 = new MintableERC721("Test", "TEST");
 
         vm.prank(owner);
-        vm.expectRevert("StERC721Registry: impl is zero address");
+        vm.expectRevert(abi.encodeWithSelector(InvalidAddress.selector, address(0)));
         registry.createStERC721(address(erc721), address(0));
     }
 
@@ -194,7 +195,7 @@ contract StERC721RegistryTest is Test {
         bytes memory encodedCallData = "";
 
         vm.prank(owner);
-        vm.expectRevert("StERC721Registry: asset nonexist");
+        vm.expectRevert(abi.encodeWithSelector(StERC721NotExists.selector, address(erc721)));
         registry.upgradeStERC721(address(erc721), address(newImplementation), encodedCallData);
     }
 

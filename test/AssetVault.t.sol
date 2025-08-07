@@ -10,6 +10,7 @@ import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Re
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import {IAssetVault} from "../src/interfaces/IAssetVault.sol";
 import {AssetVault} from "../src/AssetVault.sol";
@@ -17,7 +18,7 @@ import {MintableERC1155} from "./mock/MintableERC1155.sol";
 import {MintableERC721} from "./mock/MintableERC721.sol";
 import {MintableERC20} from "./mock/MintableERC20.sol";
 import {IDelegateRegistryV2} from "../src/interfaces/IDelegateRegistryV2.sol";
-
+import {InvalidAddress, InvalidERC721Owner, MissingStakedERC721} from "../src/interfaces/IErrors.sol";
 import {console} from "forge-std/console.sol";
 
 contract AssetVaultTest is Test {
@@ -82,7 +83,7 @@ contract AssetVaultTest is Test {
         uint256 tokenId = 1;
         bytes32 rights = bytes32("SOME_RIGHTS");
 
-        vm.expectRevert("AssetVault: invalid delegate");
+        vm.expectRevert(abi.encodeWithSelector(InvalidAddress.selector, address(0)));
         vault.setDelegateCashV2(address(0), address(mockERC1155), tokenId, rights, true);
         vm.stopPrank();
     }
@@ -123,7 +124,7 @@ contract AssetVaultTest is Test {
     function testStakeERC721() public {
         uint256 tokenId = 1;
         // Mint the ERC721 NFT to the vault
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         assertEq(mockERC721.ownerOf(tokenId), address(vault));
 
         // Only owner can call stakeERC721
@@ -138,7 +139,7 @@ contract AssetVaultTest is Test {
 
     function testStakeERC721_RevertNotOwner() public {
         uint256 tokenId = 1;
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
 
         // Non-owner call should revert
         vm.startPrank(delegate);
@@ -153,7 +154,7 @@ contract AssetVaultTest is Test {
         mockERC721.mint(address(this), tokenId);
 
         vm.startPrank(owner);
-        vm.expectRevert("AssetVault: ERC721 is not owned by this vault");
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Owner.selector, address(mockERC721), tokenId));
         vault.stakeERC721(address(mockERC721), tokenId);
         vm.stopPrank();
     }
@@ -161,7 +162,7 @@ contract AssetVaultTest is Test {
     function testUnstakeERC721() public {
         uint256 tokenId = 1;
         // First mint and stake
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         vm.startPrank(owner);
         vault.stakeERC721(address(mockERC721), tokenId);
 
@@ -180,7 +181,7 @@ contract AssetVaultTest is Test {
 
     function testUnstakeERC721_RevertNotOwner() public {
         uint256 tokenId = 1;
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         vm.startPrank(owner);
         vault.stakeERC721(address(mockERC721), tokenId);
         vm.stopPrank();
@@ -194,19 +195,19 @@ contract AssetVaultTest is Test {
 
     function testUnstakeERC721_RevertStillOwnedByVault() public {
         uint256 tokenId = 1;
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         vm.startPrank(owner);
         vault.stakeERC721(address(mockERC721), tokenId);
 
         // NFT still in vault, unstake should revert
-        vm.expectRevert("AssetVault: ERC721 is still owned by this vault");
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Owner.selector, address(mockERC721), tokenId));
         vault.unstakeERC721(address(mockERC721), tokenId);
         vm.stopPrank();
     }
 
     function testTransferERC721() public {
         uint256 tokenId = 1;
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         assertEq(mockERC721.ownerOf(tokenId), address(vault));
 
         vm.startPrank(owner);
@@ -246,8 +247,9 @@ contract AssetVaultTest is Test {
 
     function testDisableInitializers() public {
         vm.startPrank(owner);
+        vault = new AssetVault();
         vault.disableInitializers();
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
         vault.initialize(owner, delegate);
         vm.stopPrank();
     }
@@ -315,7 +317,7 @@ contract AssetVaultTest is Test {
         address recipient = makeAddr("recipient");
 
         // Mint ERC721 to vault
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         assertEq(mockERC721.ownerOf(tokenId), address(vault));
 
         // Only owner can call transferNonStakedERC721
@@ -331,7 +333,7 @@ contract AssetVaultTest is Test {
         uint256 tokenId = 1;
         address recipient = makeAddr("recipient");
 
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
 
         // Non-owner should revert
         vm.startPrank(delegate);
@@ -345,12 +347,12 @@ contract AssetVaultTest is Test {
         address recipient = makeAddr("recipient");
 
         // Mint and stake the token
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         vm.startPrank(owner);
         vault.stakeERC721(address(mockERC721), tokenId);
 
         // Should revert due to keepStaked modifier
-        vm.expectRevert("AssetVault: ERC721 is not staked in this vault");
+        vm.expectRevert(abi.encodeWithSelector(MissingStakedERC721.selector, address(mockERC721)));
         vault.transferNonStakedERC721(recipient, address(mockERC721), tokenId);
         vm.stopPrank();
     }
@@ -384,7 +386,7 @@ contract AssetVaultTest is Test {
 
     function testDelegateCall_RevertKeepStaked() public {
         uint256 tokenId = 1;
-        mockERC721.mint(address(vault), tokenId);
+        mockERC721.safeMint(address(vault), tokenId);
         vm.startPrank(owner);
         vault.stakeERC721(address(mockERC721), tokenId);
 
@@ -393,7 +395,7 @@ contract AssetVaultTest is Test {
             MockDelegateCallFailContract.transferStakedERC721.selector, address(this), address(mockERC721), tokenId
         );
 
-        vm.expectRevert("AssetVault: ERC721 is not staked in this vault");
+        vm.expectRevert(abi.encodeWithSelector(MissingStakedERC721.selector, address(mockERC721)));
         vault.delegateCall(address(failContract), data);
         vm.stopPrank();
     }

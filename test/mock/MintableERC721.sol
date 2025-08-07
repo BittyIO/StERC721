@@ -15,6 +15,11 @@ contract MintableERC721 is ERC721Enumerable {
         baseURI = "https://MintableERC721/";
     }
 
+    function safeMint(address to, uint256 tokenId) public returns (bool) {
+        _safeMint(to, tokenId);
+        return true;
+    }
+
     function mint(address to, uint256 tokenId) public returns (bool) {
         _mint(to, tokenId);
         return true;

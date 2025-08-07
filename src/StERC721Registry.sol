@@ -10,6 +10,7 @@ import {UpgradeableProxy} from "./UpgradeableProxy.sol";
 import {IStERC721} from "./interfaces/IStERC721.sol";
 import {IStERC721Registry} from "./interfaces/IStERC721Registry.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
+import {InvalidAddress, StERC721AlreadyExists, StERC721NotExists} from "./interfaces/IErrors.sol";
 
 contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, IStERC721Registry {
     string private _chainName;
@@ -44,11 +45,14 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
     }
 
     function _createStERC721(address erc721, address stERC721Impl) internal returns (address stERC721) {
-        require(stERC721s[erc721] == address(0), "StERC721Registry: asset exist");
-        require(stERC721Impl != address(0), "StERC721Registry: impl is zero address");
+        if (stERC721s[erc721] != address(0)) {
+            revert StERC721AlreadyExists(erc721);
+        }
+        if (stERC721Impl == address(0)) {
+            revert InvalidAddress(stERC721Impl);
+        }
         stERC721 = _createProxy(erc721, stERC721Impl);
         stERC721s[erc721] = stERC721;
-
         // make sure transfer ownership to stERC721Registry
         assetVaultRegistry.authorize(address(stERC721));
     }
@@ -60,15 +64,15 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
 
     function _buildInitParams(address erc721) internal view returns (bytes memory initParams) {
         string memory erc721Symbol = IERC721Metadata(erc721).symbol();
-        string memory berc721Name = string(abi.encodePacked(namePrefix, " ", erc721Symbol));
-        string memory berc721Symbol = string(abi.encodePacked(symbolPrefix, erc721Symbol));
+        string memory erc721Name = string(abi.encodePacked(namePrefix, " ", erc721Symbol));
+        erc721Symbol = string(abi.encodePacked(symbolPrefix, erc721Symbol));
         initParams = abi.encodeWithSelector(
             IStERC721.initialize.selector,
             _chainName,
             IERC721Metadata(erc721),
             assetVaultRegistry,
-            berc721Name,
-            berc721Symbol
+            erc721Name,
+            erc721Symbol
         );
     }
 
@@ -96,7 +100,9 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
 
     function _upgradeStERC721(address erc721, address stERC721Impl, bytes memory encodedCallData) internal {
         address stERC721Proxy = stERC721s[erc721];
-        require(stERC721Proxy != address(0), "StERC721Registry: asset nonexist");
+        if (stERC721Proxy == address(0)) {
+            revert StERC721NotExists(erc721);
+        }
         ProxyAdmin proxyAdmin = ProxyAdmin(payable(UpgradeableProxy(payable(stERC721Proxy)).admin()));
         proxyAdmin.upgradeAndCall(ITransparentUpgradeableProxy(stERC721Proxy), stERC721Impl, encodedCallData);
     }
