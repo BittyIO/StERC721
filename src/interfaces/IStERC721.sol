@@ -5,6 +5,7 @@ import {IAssetVaultRegistry} from "./IAssetVaultRegistry.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import {IMintStrategy} from "./IMintStrategy.sol";
 
 interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     event Minted(address indexed to, uint256[] tokenId);
@@ -17,7 +18,8 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
         IERC721Metadata erc721_,
         IAssetVaultRegistry assetVaultRegistry_,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        IMintStrategy mintStrategy_
     ) external;
     function mint(uint256[] calldata tokenIds) external;
 
@@ -25,6 +27,8 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     function burn(uint256[] calldata tokenIds) external;
 
     function underlyingAsset() external view returns (address);
+
+    function setMintStrategy(IMintStrategy mintStrategy) external;
 
     function setDelegateCashV2(address delegate, uint256[] calldata tokenIds, bytes32 rights, bool value)
         external
@@ -35,4 +39,6 @@ interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     function contractURI() external view returns (string memory);
 
     function setBaseURI(string memory baseURI_) external;
+
+    function setNameAndSymbol(string memory name_, string memory symbol_) external;
 }

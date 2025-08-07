@@ -7,17 +7,29 @@ import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/I
 import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {UpgradeableProxy} from "./UpgradeableProxy.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
 import {IStERC721} from "./interfaces/IStERC721.sol";
 import {IStERC721Registry} from "./interfaces/IStERC721Registry.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
-import {InvalidAddress, StERC721AlreadyExists, StERC721NotExists} from "./interfaces/IErrors.sol";
+import {IMintStrategy} from "./interfaces/IMintStrategy.sol";
+import {InvalidAddress, StERC721NotExists, InvalidParams} from "./interfaces/IErrors.sol";
 
 contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, IStERC721Registry {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     string private _chainName;
     string public constant namePrefix = "StERC721";
     string public constant symbolPrefix = "St";
-    mapping(address => address) public stERC721s;
     IAssetVaultRegistry public assetVaultRegistry;
+    EnumerableSet.AddressSet private _stERC721s;
+
+    modifier onlyStERC721(address stERC721) {
+        if (!_stERC721s.contains(stERC721)) {
+            revert StERC721NotExists(stERC721);
+        }
+        _;
+    }
 
     function disableInitializers() external override {
         _disableInitializers();
@@ -34,35 +46,32 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         _chainName = chainName_;
     }
 
-    function createStERC721(address erc721, address stERC721Impl)
+    function createStERC721(address erc721, address stERC721Impl, address mintStrategy)
         external
         override
         nonReentrant
         onlyOwner
         returns (address)
     {
-        return _createStERC721(erc721, stERC721Impl);
+        return _createStERC721(erc721, stERC721Impl, mintStrategy);
     }
 
-    function _createStERC721(address erc721, address stERC721Impl) internal returns (address stERC721) {
-        if (stERC721s[erc721] != address(0)) {
-            revert StERC721AlreadyExists(erc721);
-        }
+    function _createStERC721(address erc721, address stERC721Impl, address mintStrategy)
+        internal
+        returns (address stERC721)
+    {
         if (stERC721Impl == address(0)) {
             revert InvalidAddress(stERC721Impl);
         }
-        stERC721 = _createProxy(erc721, stERC721Impl);
-        stERC721s[erc721] = stERC721;
+        bytes memory initParams = _buildInitParams(erc721, mintStrategy);
+        stERC721 = address(new UpgradeableProxy(stERC721Impl, address(this), initParams));
+        _stERC721s.add(stERC721);
+        emit Created(stERC721, stERC721Impl);
         // make sure transfer ownership to stERC721Registry
         assetVaultRegistry.authorize(address(stERC721));
     }
 
-    function _createProxy(address erc721, address stERC721Impl) internal returns (address stERC721) {
-        bytes memory initParams = _buildInitParams(erc721);
-        stERC721 = address(new UpgradeableProxy(stERC721Impl, address(this), initParams));
-    }
-
-    function _buildInitParams(address erc721) internal view returns (bytes memory initParams) {
+    function _buildInitParams(address erc721, address mintStrategy) internal view returns (bytes memory initParams) {
         string memory erc721Symbol = IERC721Metadata(erc721).symbol();
         string memory erc721Name = string(abi.encodePacked(namePrefix, " ", erc721Symbol));
         erc721Symbol = string(abi.encodePacked(symbolPrefix, erc721Symbol));
@@ -72,57 +81,83 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
             IERC721Metadata(erc721),
             assetVaultRegistry,
             erc721Name,
-            erc721Symbol
+            erc721Symbol,
+            mintStrategy
         );
     }
 
-    function batchCreateStERC721(address[] calldata erc721s, address stERC721Impl)
+    function batchCreateStERC721(address[] calldata erc721s, address stERC721Impl, address[] calldata mintStrategys)
         external
         override
         nonReentrant
         onlyOwner
         returns (address[] memory stERC721s_)
     {
+        if (erc721s.length != mintStrategys.length) {
+            revert InvalidParams();
+        }
         stERC721s_ = new address[](erc721s.length);
         for (uint256 i = 0; i < erc721s.length; i++) {
-            stERC721s_[i] = _createStERC721(erc721s[i], stERC721Impl);
+            stERC721s_[i] = _createStERC721(erc721s[i], stERC721Impl, mintStrategys[i]);
         }
     }
 
-    function upgradeStERC721(address erc721, address stERC721Impl, bytes calldata encodedCallData)
+    function upgradeStERC721(address stERC721, address stERC721Impl, bytes calldata encodedCallData)
         external
         override
         nonReentrant
         onlyOwner
     {
-        _upgradeStERC721(erc721, stERC721Impl, encodedCallData);
+        _upgradeStERC721(stERC721, stERC721Impl, encodedCallData);
     }
 
-    function _upgradeStERC721(address erc721, address stERC721Impl, bytes memory encodedCallData) internal {
-        address stERC721Proxy = stERC721s[erc721];
-        if (stERC721Proxy == address(0)) {
-            revert StERC721NotExists(erc721);
-        }
-        ProxyAdmin proxyAdmin = ProxyAdmin(payable(UpgradeableProxy(payable(stERC721Proxy)).admin()));
-        proxyAdmin.upgradeAndCall(ITransparentUpgradeableProxy(stERC721Proxy), stERC721Impl, encodedCallData);
+    function _upgradeStERC721(address stERC721, address stERC721Impl, bytes memory encodedCallData)
+        internal
+        onlyStERC721(stERC721)
+    {
+        ProxyAdmin proxyAdmin = ProxyAdmin(payable(UpgradeableProxy(payable(stERC721)).admin()));
+        proxyAdmin.upgradeAndCall(ITransparentUpgradeableProxy(stERC721), stERC721Impl, encodedCallData);
+        emit Upgraded(stERC721, stERC721Impl);
     }
 
-    function batchUpgradeStERC721(address[] calldata erc721s, address stERC721Impl, bytes[] calldata encodedCallDatas)
+    function batchUpgradeStERC721(address[] calldata stERC721s, address stERC721Impl, bytes[] calldata encodedCallDatas)
         external
         override
         nonReentrant
         onlyOwner
     {
-        for (uint256 i = 0; i < erc721s.length; i++) {
-            _upgradeStERC721(erc721s[i], stERC721Impl, encodedCallDatas[i]);
+        if (stERC721s.length != encodedCallDatas.length) {
+            revert InvalidParams();
+        }
+        for (uint256 i = 0; i < stERC721s.length; i++) {
+            _upgradeStERC721(stERC721s[i], stERC721Impl, encodedCallDatas[i]);
         }
     }
 
-    function getStERC721(address erc721) external view override returns (address stERC721) {
-        stERC721 = stERC721s[erc721];
-    }
-
-    function setBaseURI(address stERC721_, string memory baseURI_) external override onlyOwner {
+    function setBaseURI(address stERC721_, string memory baseURI_)
+        external
+        override
+        onlyOwner
+        onlyStERC721(stERC721_)
+    {
         IStERC721(stERC721_).setBaseURI(baseURI_);
+    }
+
+    function setMintStrategy(address stERC721_, address mintStrategy_)
+        external
+        override
+        onlyOwner
+        onlyStERC721(stERC721_)
+    {
+        IStERC721(stERC721_).setMintStrategy(IMintStrategy(mintStrategy_));
+    }
+
+    function setSymbol(address stERC721_, string memory symbol_) external override onlyOwner onlyStERC721(stERC721_) {
+        if (bytes(symbol_).length == 0) {
+            revert InvalidParams();
+        }
+        string memory name_ = string(abi.encodePacked(namePrefix, " ", symbol_));
+        symbol_ = string(abi.encodePacked(symbolPrefix, symbol_));
+        IStERC721(stERC721_).setNameAndSymbol(name_, symbol_);
     }
 }

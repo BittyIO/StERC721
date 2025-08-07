@@ -6,6 +6,7 @@ import {StERC721} from "../src/StERC721.sol";
 import {AssetVaultRegistry} from "../src/AssetVaultRegistry.sol";
 import {AssetVault} from "../src/AssetVault.sol";
 import {MintableERC721} from "./mock/MintableERC721.sol";
+import {MockMintStrategy} from "./mock/MockMintStrategy.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IDelegateRegistryV2} from "../src/interfaces/IDelegateRegistryV2.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -15,8 +16,10 @@ import {ERC721EnumerableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {IStERC721} from "../src/interfaces/IStERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {InvalidERC721, InvalidERC721Owner} from "../src/interfaces/IErrors.sol";
+import {InvalidERC721, InvalidERC721Owner, InvalidERC721Token} from "../src/interfaces/IErrors.sol";
+import {IMintStrategy} from "../src/interfaces/IMintStrategy.sol";
 import {console2} from "forge-std/console2.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract StERC721Test is Test {
     using Strings for uint256;
@@ -31,6 +34,7 @@ contract StERC721Test is Test {
     address public owner;
     address public user;
     address public delegate;
+    MockMintStrategy public mockMintStrategy;
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -43,12 +47,14 @@ contract StERC721Test is Test {
         registry = new AssetVaultRegistry();
         registry.initialize(address(implementation), delegationRegistry);
 
+        mockMintStrategy = new MockMintStrategy();
         mockERC721_A = new MintableERC721("TestERC721_A", "TST721A");
         mockERC721_B = new MintableERC721("TestERC721_B", "TST721B");
+
         stERC721_A = new StERC721();
-        stERC721_A.initialize("eth", mockERC721_A, registry, "Staked ERC721", "stERC721_A");
+        stERC721_A.initialize("eth", mockERC721_A, registry, "Staked ERC721", "stERC721_A", mockMintStrategy);
         stERC721_B = new StERC721();
-        stERC721_B.initialize("eth", mockERC721_B, registry, "Staked ERC721", "stERC721_B");
+        stERC721_B.initialize("eth", mockERC721_B, registry, "Staked ERC721", "stERC721_B", mockMintStrategy);
         registry.authorize(address(stERC721_A));
         registry.authorize(address(stERC721_B));
 
@@ -66,7 +72,7 @@ contract StERC721Test is Test {
         StERC721 stERC721 = new StERC721();
         stERC721.disableInitializers();
         vm.expectRevert();
-        stERC721.initialize("eth", mockERC721_A, registry, "Staked ERC721", "stERC721");
+        stERC721.initialize("eth", mockERC721_A, registry, "Staked ERC721", "stERC721", mockMintStrategy);
         vm.stopPrank();
     }
 
@@ -372,8 +378,266 @@ contract StERC721Test is Test {
 
     function test_onERC721Received_revertsIfNotFromUnderlying() public {
         uint256 tokenId = 43;
-        address staker = makeAddr("staker");
         vm.expectRevert(abi.encodeWithSelector(InvalidERC721.selector, address(mockERC721_A)));
         mockERC721_A.safeMint(address(stERC721_B), tokenId);
+    }
+
+    function testMint_RevertIfInvalidERC721Token() public {
+        uint256 tokenId = 1;
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        // Set mintStrategy to disallow this token
+        mockMintStrategy.setMintable(address(mockERC721_A), tokenId, false);
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId);
+        mockERC721_A.setApprovalForAll(address(stERC721_A), true);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Token.selector, address(mockERC721_A), tokenId));
+        stERC721_A.mint(tokenIds);
+        vm.stopPrank();
+    }
+
+    function testMint_RevertIfInvalidERC721TokenInBatch() public {
+        uint256 tokenId1 = 1;
+        uint256 tokenId2 = 2;
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = tokenId1;
+        tokenIds[1] = tokenId2;
+
+        // Set mintStrategy to allow first token, disallow second token
+        mockMintStrategy.setMintable(address(mockERC721_A), tokenId1, true);
+        mockMintStrategy.setMintable(address(mockERC721_A), tokenId2, false);
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId1);
+        mockERC721_A.mint(user, tokenId2);
+        mockERC721_A.setApprovalForAll(address(stERC721_A), true);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Token.selector, address(mockERC721_A), tokenId2));
+        stERC721_A.mint(tokenIds);
+        vm.stopPrank();
+    }
+
+    function testMint_SuccessWithZeroAddressMintStrategy() public {
+        uint256 tokenId = 1;
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        // Create a new StERC721 with zero address as mintStrategy
+        StERC721 stERC721ZeroStrategy = new StERC721();
+        vm.prank(owner);
+        stERC721ZeroStrategy.initialize(
+            "eth", mockERC721_A, registry, "Staked ERC721 Zero", "stERC721Zero", IMintStrategy(address(0))
+        );
+        vm.prank(owner);
+        registry.authorize(address(stERC721ZeroStrategy));
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId);
+        mockERC721_A.setApprovalForAll(address(stERC721ZeroStrategy), true);
+
+        // Even if mintStrategy is zero address, mint should succeed
+        stERC721ZeroStrategy.mint(tokenIds);
+
+        assertEq(stERC721ZeroStrategy.ownerOf(tokenId), user);
+        assertEq(mockERC721_A.ownerOf(tokenId), address(registry.getAssetVault(user)));
+        vm.stopPrank();
+    }
+
+    function testMint_RevertIfMintStrategyReturnsFalse() public {
+        uint256 tokenId = 1;
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        // Create a new MockMintStrategy, default returns false
+        MockMintStrategy restrictiveMintStrategy = new MockMintStrategy();
+        restrictiveMintStrategy.setMintable(address(mockERC721_A), tokenId, false);
+
+        // Create a new StERC721, using restrictive mintStrategy
+        StERC721 stERC721Restrictive = new StERC721();
+        vm.prank(owner);
+        stERC721Restrictive.initialize(
+            "eth", mockERC721_A, registry, "Staked ERC721 Restrictive", "stERC721Restrictive", restrictiveMintStrategy
+        );
+        vm.prank(owner);
+        registry.authorize(address(stERC721Restrictive));
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId);
+        mockERC721_A.setApprovalForAll(address(stERC721Restrictive), true);
+
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Token.selector, address(mockERC721_A), tokenId));
+        stERC721Restrictive.mint(tokenIds);
+        vm.stopPrank();
+    }
+
+    function testMint_SuccessAfterMintStrategyUpdate() public {
+        uint256 tokenId = 1;
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        // Initial set mintStrategy to disallow this token
+        mockMintStrategy.setMintable(address(mockERC721_A), tokenId, false);
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId);
+        mockERC721_A.setApprovalForAll(address(stERC721_A), true);
+
+        // First mint should fail
+        vm.expectRevert(abi.encodeWithSelector(InvalidERC721Token.selector, address(mockERC721_A), tokenId));
+        stERC721_A.mint(tokenIds);
+
+        // Update mintStrategy to allow this token
+        vm.stopPrank();
+        vm.prank(owner);
+        stERC721_A.setMintStrategy(mockMintStrategy);
+
+        vm.startPrank(user);
+        // Reset mintable state
+        mockMintStrategy.setMintable(address(mockERC721_A), tokenId, true);
+
+        // Now mint should succeed
+        stERC721_A.mint(tokenIds);
+
+        assertEq(stERC721_A.ownerOf(tokenId), user);
+        assertEq(mockERC721_A.ownerOf(tokenId), address(registry.getAssetVault(user)));
+        vm.stopPrank();
+    }
+
+    // SetNameAndSymbol tests
+    function testSetNameAndSymbol_Owner() public {
+        // Check initial name and symbol
+        assertEq(stERC721_A.name(), "Staked ERC721");
+        assertEq(stERC721_A.symbol(), "stERC721_A");
+
+        vm.startPrank(owner);
+        string memory newName = "Custom Staked Token";
+        string memory newSymbol = "CST";
+
+        stERC721_A.setNameAndSymbol(newName, newSymbol);
+
+        // Check updated name and symbol
+        assertEq(stERC721_A.name(), newName);
+        assertEq(stERC721_A.symbol(), newSymbol);
+        vm.stopPrank();
+    }
+
+    function testSetNameAndSymbol_RevertIfNotOwner() public {
+        string memory newName = "Custom Staked Token";
+        string memory newSymbol = "CST";
+
+        vm.startPrank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        stERC721_A.setNameAndSymbol(newName, newSymbol);
+        vm.stopPrank();
+    }
+
+    function testSetNameAndSymbol_EmptyStrings() public {
+        vm.startPrank(owner);
+        string memory emptyName = "";
+        string memory emptySymbol = "";
+
+        stERC721_A.setNameAndSymbol(emptyName, emptySymbol);
+
+        // Check updated name and symbol - empty strings should be set correctly
+        assertEq(stERC721_A.name(), "");
+        assertEq(stERC721_A.symbol(), "");
+        vm.stopPrank();
+    }
+
+    function testSetNameAndSymbol_LongStrings() public {
+        vm.startPrank(owner);
+        string memory longName = "This is a very long name for testing purposes with many characters";
+        string memory longSymbol = "VERY_LONG_SYMBOL_FOR_TESTING";
+
+        stERC721_A.setNameAndSymbol(longName, longSymbol);
+
+        // Check updated name and symbol
+        assertEq(stERC721_A.name(), longName);
+        assertEq(stERC721_A.symbol(), longSymbol);
+        vm.stopPrank();
+    }
+
+    function testSetNameAndSymbol_SpecialCharacters() public {
+        vm.startPrank(owner);
+        string memory specialName = "Staked Token #123";
+        string memory specialSymbol = "ST#123";
+
+        stERC721_A.setNameAndSymbol(specialName, specialSymbol);
+
+        // Check updated name and symbol
+        assertEq(stERC721_A.name(), specialName);
+        assertEq(stERC721_A.symbol(), specialSymbol);
+        vm.stopPrank();
+    }
+
+    function testSetNameAndSymbol_MultipleUpdates() public {
+        vm.startPrank(owner);
+
+        // First update
+        stERC721_A.setNameAndSymbol("First Name", "FIRST");
+        assertEq(stERC721_A.name(), "First Name");
+        assertEq(stERC721_A.symbol(), "FIRST");
+
+        // Second update
+        stERC721_A.setNameAndSymbol("Second Name", "SECOND");
+        assertEq(stERC721_A.name(), "Second Name");
+        assertEq(stERC721_A.symbol(), "SECOND");
+
+        // Third update
+        stERC721_A.setNameAndSymbol("Third Name", "THIRD");
+        assertEq(stERC721_A.name(), "Third Name");
+        assertEq(stERC721_A.symbol(), "THIRD");
+        vm.stopPrank();
+    }
+
+    function testSetNameAndSymbol_DifferentStERC721() public {
+        // Test with stERC721_B
+        assertEq(stERC721_B.name(), "Staked ERC721");
+        assertEq(stERC721_B.symbol(), "stERC721_B");
+
+        vm.startPrank(owner);
+        string memory newName = "Different Staked Token";
+        string memory newSymbol = "DST";
+
+        stERC721_B.setNameAndSymbol(newName, newSymbol);
+
+        // Check updated name and symbol
+        assertEq(stERC721_B.name(), newName);
+        assertEq(stERC721_B.symbol(), newSymbol);
+
+        // Verify stERC721_A is unchanged
+        assertEq(stERC721_A.name(), "Staked ERC721");
+        assertEq(stERC721_A.symbol(), "stERC721_A");
+        vm.stopPrank();
+    }
+
+    function testSetNameAndSymbol_AfterMint() public {
+        uint256 tokenId = 1;
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = tokenId;
+
+        vm.startPrank(user);
+        mockERC721_A.mint(user, tokenId);
+        mockERC721_A.setApprovalForAll(address(stERC721_A), true);
+        stERC721_A.mint(tokenIds);
+        vm.stopPrank();
+
+        // Change name and symbol after minting
+        vm.startPrank(owner);
+        string memory newName = "Post Mint Name";
+        string memory newSymbol = "PMN";
+
+        stERC721_A.setNameAndSymbol(newName, newSymbol);
+
+        // Check updated name and symbol
+        assertEq(stERC721_A.name(), newName);
+        assertEq(stERC721_A.symbol(), newSymbol);
+
+        // Verify token ownership is still correct
+        assertEq(stERC721_A.ownerOf(tokenId), user);
+        vm.stopPrank();
     }
 }
