@@ -17,15 +17,26 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IStERC721} from "./interfaces/IStERC721.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
-import {InvalidERC721, InvalidERC721Owner} from "./interfaces/IErrors.sol";
+import {IMintStrategy} from "./interfaces/IMintStrategy.sol";
+import {InvalidERC721, InvalidERC721Owner, InvalidERC721Token} from "./interfaces/IErrors.sol";
 
 contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC721EnumerableUpgradeable {
     using Clones for address;
 
+    IMintStrategy public mintStrategy;
     IERC721Metadata private _erc721;
     IAssetVaultRegistry public assetVaultRegistry;
     string private _customBaseURI;
     string private _chainName;
+
+    // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC721Enumerable")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ERC721StorageLocation = 0x80bb2b638cc20bc4d0a60d66940f3ab4a00c1d7b313497ca82fb0b4ab0079300;
+
+    function __getERC721Storage() private pure returns (ERC721Storage storage $) {
+        assembly {
+            $.slot := ERC721StorageLocation
+        }
+    }
 
     function disableInitializers() external override {
         _disableInitializers();
@@ -36,7 +47,8 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         IERC721Metadata erc721_,
         IAssetVaultRegistry assetVaultRegistry_,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        IMintStrategy mintStrategy_
     ) external override initializer {
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
@@ -45,6 +57,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         _erc721 = erc721_;
         assetVaultRegistry = assetVaultRegistry_;
         _chainName = chainName_;
+        mintStrategy = mintStrategy_;
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -70,6 +83,9 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         uint256 tokenId_;
         for (uint256 i = 0; i < tokenIds_.length; i++) {
             tokenId_ = tokenIds_[i];
+            if (address(mintStrategy) != address(0) && !mintStrategy.mintable(address(_erc721), tokenId_)) {
+                revert InvalidERC721Token(address(_erc721), tokenId_);
+            }
             _erc721.safeTransferFrom(staker_, address(assetVault_), tokenId_);
             assetVaultRegistry.stakedERC721(staker_, address(_erc721), tokenId_);
             _safeMint(staker_, tokenId_);
@@ -108,6 +124,10 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
 
     function underlyingAsset() external view override returns (address) {
         return address(_erc721);
+    }
+
+    function setMintStrategy(IMintStrategy mintStrategy_) external override onlyOwner {
+        mintStrategy = mintStrategy_;
     }
 
     function setBaseURI(string memory baseURI_) external override onlyOwner {
@@ -168,5 +188,11 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
             address assetVault_ = assetVaultRegistry.getAssetVault(ownerOf(tokenIds_[i]));
             delegates[i] = IAssetVault(assetVault_).getDelegateCashForTokenV2(address(_erc721), tokenIds_[i]);
         }
+    }
+
+    function setNameAndSymbol(string memory name_, string memory symbol_) external override onlyOwner {
+        ERC721Storage storage $ = __getERC721Storage();
+        $._name = name_;
+        $._symbol = symbol_;
     }
 }
