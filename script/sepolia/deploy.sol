@@ -20,7 +20,7 @@ contract DeployScript is Script {
 
     function run() public {
         vm.createSelectFork("sepolia");
-        vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
+        vm.startBroadcast(vm.envUint("TESTNET_PRIVATE_KEY"));
         Options memory opts;
         address assetVaultImpl = Upgrades.deployImplementation("AssetVault.sol", opts);
         address assetVaultRegistry = Upgrades.deployTransparentProxy(
