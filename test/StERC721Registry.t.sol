@@ -14,6 +14,9 @@ import {UpgradeableProxy} from "../src/UpgradeableProxy.sol";
 import {InvalidAddress, StERC721NotExists, InvalidParams} from "../src/interfaces/IErrors.sol";
 import {Upgrades} from "@openzeppelin/foundry-upgrades/src/Upgrades.sol";
 import {Options} from "@openzeppelin/foundry-upgrades/src/Options.sol";
+import {MockClaimAirdropStrategy} from "./mock/MockClaimAirdropStrategy.sol";
+import {MockExecuteAirdropStrategy} from "./mock/MockExecuteAirdropStrategy.sol";
+import {MockAirdropContractForCurrentOwner} from "./mock/MockAirdropContract.sol";
 
 contract StERC721RegistryTest is Test {
     // bytes32 internal constant IMPL_SLOT = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
@@ -624,5 +627,59 @@ contract StERC721RegistryTest is Test {
         assertEq(StERC721(stERC721).name(), "StERC721 THIRD");
         assertEq(StERC721(stERC721).symbol(), "StTHIRD");
         vm.stopPrank();
+    }
+
+    function testAddAndRemoveClaimAirdropStrategy() public {
+        // Deploy a mock strategy address
+        address mockStrategy = address(
+            new MockClaimAirdropStrategy(
+                new MockAirdropContractForCurrentOwner(address(0), address(0), address(0), address(0)),
+                address(registry),
+                new address[](0),
+                new address[](0),
+                new address[](0)
+            )
+        );
+
+        // Only owner can add claim airdrop strategy
+        vm.prank(owner);
+        registry.addClaimAirdropStrategy(mockStrategy);
+
+        // Only owner can remove claim airdrop strategy
+        vm.prank(owner);
+        registry.removeClaimAirdropStrategy(mockStrategy);
+
+        // Non-owner should revert on add
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.addClaimAirdropStrategy(mockStrategy);
+
+        // Non-owner should revert on remove
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.removeClaimAirdropStrategy(mockStrategy);
+    }
+
+    function testAddAndRemoveExecuteAirdropStrategy() public {
+        // Deploy a mock strategy address
+        address mockStrategy = address(new MockExecuteAirdropStrategy());
+
+        // Only owner can add execute airdrop strategy
+        vm.prank(owner);
+        registry.addExecuteAirdropStrategy(mockStrategy);
+
+        // Only owner can remove execute airdrop strategy
+        vm.prank(owner);
+        registry.removeExecuteAirdropStrategy(mockStrategy);
+
+        // Non-owner should revert on add
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.addExecuteAirdropStrategy(mockStrategy);
+
+        // Non-owner should revert on remove
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user));
+        registry.removeExecuteAirdropStrategy(mockStrategy);
     }
 }
