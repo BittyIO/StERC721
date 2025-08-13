@@ -58,7 +58,8 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
         _;
     }
 
-    function disableInitializers() external override {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
         _disableInitializers();
     }
 

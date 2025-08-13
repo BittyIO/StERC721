@@ -12,6 +12,8 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IAssetVaultRegistry} from "../src/interfaces/IAssetVaultRegistry.sol";
 import {UpgradeableProxy} from "../src/UpgradeableProxy.sol";
 import {InvalidAddress, StERC721NotExists, InvalidParams} from "../src/interfaces/IErrors.sol";
+import {Upgrades} from "@openzeppelin/foundry-upgrades/src/Upgrades.sol";
+import {Options} from "@openzeppelin/foundry-upgrades/src/Options.sol";
 
 contract StERC721RegistryTest is Test {
     // bytes32 internal constant IMPL_SLOT = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
@@ -30,21 +32,25 @@ contract StERC721RegistryTest is Test {
 
         vm.startPrank(owner);
         AssetVault implementation = new AssetVault();
-        assetVaultRegistry = new AssetVaultRegistry();
-        assetVaultRegistry.initialize(address(implementation), delegationRegistry);
-        registry = new StERC721Registry();
-        registry.initialize("eth", IAssetVaultRegistry(address(assetVaultRegistry)));
+        Options memory opts;
+        assetVaultRegistry = AssetVaultRegistry(
+            Upgrades.deployTransparentProxy(
+                "AssetVaultRegistry.sol",
+                owner,
+                abi.encodeCall(AssetVaultRegistry.initialize, (address(implementation), delegationRegistry)),
+                opts
+            )
+        );
+        registry = StERC721Registry(
+            Upgrades.deployTransparentProxy(
+                "StERC721Registry.sol",
+                owner,
+                abi.encodeCall(StERC721Registry.initialize, ("eth", IAssetVaultRegistry(address(assetVaultRegistry)))),
+                opts
+            )
+        );
         assetVaultRegistry.transferOwnership(address(registry));
         mockMintStrategy = new MockMintStrategy();
-        vm.stopPrank();
-    }
-
-    function testDisableInitializers() public {
-        vm.startPrank(owner);
-        StERC721Registry registry1 = new StERC721Registry();
-        registry1.disableInitializers();
-        vm.expectRevert();
-        registry1.initialize("eth", IAssetVaultRegistry(address(assetVaultRegistry)));
         vm.stopPrank();
     }
 

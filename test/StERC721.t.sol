@@ -20,6 +20,8 @@ import {InvalidERC721, InvalidERC721Owner, InvalidERC721Token} from "../src/inte
 import {IMintStrategy} from "../src/interfaces/IMintStrategy.sol";
 import {console2} from "forge-std/console2.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Upgrades} from "@openzeppelin/foundry-upgrades/src/Upgrades.sol";
+import {Options} from "@openzeppelin/foundry-upgrades/src/Options.sol";
 
 contract StERC721Test is Test {
     using Strings for uint256;
@@ -44,8 +46,15 @@ contract StERC721Test is Test {
         vm.startPrank(owner);
 
         implementation = new AssetVault();
-        registry = new AssetVaultRegistry();
-        registry.initialize(address(implementation), delegationRegistry);
+        Options memory opts;
+        registry = AssetVaultRegistry(
+            Upgrades.deployTransparentProxy(
+                "AssetVaultRegistry.sol",
+                owner,
+                abi.encodeCall(AssetVaultRegistry.initialize, (address(implementation), delegationRegistry)),
+                opts
+            )
+        );
 
         mockMintStrategy = new MockMintStrategy();
         mockERC721_A = new MintableERC721("TestERC721_A", "TST721A");

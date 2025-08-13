@@ -15,6 +15,8 @@ import {MockClaimAirdropStrategy} from "./mock/MockClaimAirdropStrategy.sol";
 import {MockExecuteAirdropStrategy} from "./mock/MockExecuteAirdropStrategy.sol";
 import {MockAirdropContractForFixedOwner} from "./mock/MockAirdropContract.sol";
 import {MissingStakedERC721} from "../src/interfaces/IErrors.sol";
+import {Upgrades} from "@openzeppelin/foundry-upgrades/src/Upgrades.sol";
+import {Options} from "@openzeppelin/foundry-upgrades/src/Options.sol";
 
 import {
     InvalidAddress,
@@ -37,18 +39,17 @@ contract AssetVaultRegistryTest is Test {
         delegationRegistry = makeAddr("delegationRegistry");
         vm.startPrank(owner);
         implementation = new AssetVault();
-        registry = new AssetVaultRegistry();
-        registry.initialize(address(implementation), delegationRegistry);
+        Options memory opts;
+        registry = AssetVaultRegistry(
+            Upgrades.deployTransparentProxy(
+                "AssetVaultRegistry.sol",
+                owner,
+                abi.encodeCall(AssetVaultRegistry.initialize, (address(implementation), delegationRegistry)),
+                opts
+            )
+        );
         registry.authorize(authorizedAddress);
         vm.stopPrank();
-    }
-
-    function testDisableInitializers() public {
-        vm.prank(owner);
-        AssetVaultRegistry registry1 = new AssetVaultRegistry();
-        registry1.disableInitializers();
-        vm.expectRevert();
-        registry1.initialize(address(implementation), delegationRegistry);
     }
 
     function testInitialize() public view {

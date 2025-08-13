@@ -16,6 +16,7 @@ import {IDelegateRegistryV2} from "./interfaces/IDelegateRegistryV2.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
 import {MissingStakedERC721, InvalidAddress, InvalidERC721Owner} from "./interfaces/IErrors.sol";
 
+/// @custom:oz-upgrades-unsafe-allow-reachable delegatecall
 contract AssetVault is IAssetVault, IERC721Receiver, IERC1155Receiver, OwnableUpgradeable {
     using SafeERC20 for IERC20;
     using Address for address;
