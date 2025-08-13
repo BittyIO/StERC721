@@ -63,6 +63,9 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         if (stERC721Impl == address(0)) {
             revert InvalidAddress(stERC721Impl);
         }
+        // disable initializers for stERC721Impl
+        IStERC721(stERC721Impl).disableInitializers();
+
         bytes memory initParams = _buildInitParams(erc721, mintStrategy);
         stERC721 = address(new UpgradeableProxy(stERC721Impl, address(this), initParams));
         _stERC721s.add(stERC721);
