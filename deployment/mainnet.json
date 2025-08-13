@@ -1,0 +1,20 @@
+[
+  {
+    "contract": "AssetVault",
+    "address": "0xc22fc51f42637b08154665ce377a76d6bd9e9d6c"
+  },
+  {
+    "contract": "AssetVaultRegistry",
+    "address": "0x547ab6c8bae7d51f8ef9cfbecae44a9f6a82802f",
+    "proxyAdmin": "0x4f1a048bc0d395ddfe94173c818e62bf21022df4"
+  },
+  {
+    "contract": "StERC721Registry",
+    "address": "0xd3cf618fa834d94a3955424464ebd6856920808e",
+    "proxyAdmin": "0x1e13ae844a98c064620b93ba99b9077df67987f9"
+  },
+  {
+    "contract": "StERC721",
+    "address": "0xdaa254cde39886c5ed7aaca54e7fc7629517280a"
+  }
+]
