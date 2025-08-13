@@ -1,14 +1,18 @@
 [
   {
     "contract": "AssetVault",
-    "address": "0xa529af4e9cc6e1df4b93a4306eefce9ff1fd6774"
+    "address": "0xbcbbb3bdadc3e06cebf6827ce17ec45c6af13509"
   },
   {
     "contract": "AssetVaultRegistry",
-    "address": "0x8431b66e04a1397bd13e7582eae13401d13729e7"
+    "address": "0x77449f4f3a863db484270980c41b0fd1e8b61451"
   },
   {
     "contract": "StERC721Registry",
-    "address": "0xce21ce195fe180f77a47ddd762080f0a29f70288"
+    "address": "0x3e21490a7f627d37a1dfc65c23a1d8383c66e09e"
+  },
+  {
+    "contract": "StERC721",
+    "address": "0xc89cb14f3d3f8fdb74fcd9c168758cd36239e5d7"
   }
 ]
