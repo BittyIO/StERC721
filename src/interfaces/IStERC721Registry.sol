@@ -7,8 +7,6 @@ interface IStERC721Registry {
     event Created(address indexed stERC721, address indexed impl);
     event Upgraded(address indexed stERC721, address indexed impl);
 
-    function disableInitializers() external;
-
     function initialize(string memory chainName_, IAssetVaultRegistry assetVaultRegistry_) external;
 
     function createStERC721(address erc721, address stERC721Impl, address mintStrategy)

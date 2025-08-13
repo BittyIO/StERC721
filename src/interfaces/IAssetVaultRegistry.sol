@@ -14,7 +14,6 @@ interface IAssetVaultRegistry {
         uint256[] erc1155TokenAmounts;
     }
 
-    function disableInitializers() external;
     function initialize(address assetVaultImpl_, address delegationRegistryV2_) external;
     function authorize(address authorizedAddress_) external;
     function revokeAuthorize(address authorizedAddress_) external;
