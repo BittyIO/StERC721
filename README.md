@@ -33,3 +33,19 @@ $ forge test
 ```shell
 $ forge fmt
 ```
+
+### Deploy
+
+config .env
+
+```
+PRIVATE_KEY=
+ALCHEMY_KEY=
+ETHERSCAN_API_KEY=
+```
+
+deploy sepolia
+
+```shell
+$ npm run deploy:sepolia
+```
