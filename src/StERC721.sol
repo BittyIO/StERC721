@@ -50,10 +50,10 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         string memory symbol_,
         IMintStrategy mintStrategy_
     ) external override initializer {
-        __Ownable_init(msg.sender);
-        __ReentrancyGuard_init();
         __ERC721_init(name_, symbol_);
         __ERC721Enumerable_init();
+        __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
         _erc721 = erc721_;
         assetVaultRegistry = assetVaultRegistry_;
         _chainName = chainName_;
