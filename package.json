@@ -8,6 +8,7 @@
     "build": "forge clean && forge build",
     "test": "forge test -vvv",
     "coverage": "rm -rf ./coverage && forge -vvv coverage --ir-minimum --no-match-coverage 'test|node_modules|script' --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage --ignore-errors inconsistent",
-    "deploy:sepolia": "forge clean && forge script script/sepolia/deploy.sol:DeployScript --slow --broadcast --verify -vvv && npx tsx script/deplyment.ts --network sepolia"
+    "deploy:sepolia": "forge clean && forge script script/sepolia/deploy.sol:DeployScript --slow --broadcast --verify -vvv && npx tsx script/deplyment.ts --network sepolia",
+    "deploy:mainnet": "forge clean && forge script script/mainnet/deploy.sol:DeployScript --slow --broadcast --verify -vvv && npx tsx script/deplyment.ts --network mainnet"
   }
 }

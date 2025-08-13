@@ -164,4 +164,20 @@ contract StERC721Registry is OwnableUpgradeable, ReentrancyGuardUpgradeable, ISt
         symbol_ = string(abi.encodePacked(symbolPrefix, symbol_));
         IStERC721(stERC721_).setNameAndSymbol(name_, symbol_);
     }
+
+    function addClaimAirdropStrategy(address strategy_) external override onlyOwner {
+        assetVaultRegistry.addClaimAirdropStrategy(strategy_);
+    }
+
+    function removeClaimAirdropStrategy(address strategy_) external override onlyOwner {
+        assetVaultRegistry.removeClaimAirdropStrategy(strategy_);
+    }
+
+    function addExecuteAirdropStrategy(address strategy_) external override onlyOwner {
+        assetVaultRegistry.addExecuteAirdropStrategy(strategy_);
+    }
+
+    function removeExecuteAirdropStrategy(address strategy_) external override onlyOwner {
+        assetVaultRegistry.removeExecuteAirdropStrategy(strategy_);
+    }
 }

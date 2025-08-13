@@ -15,12 +15,12 @@ import {IAssetVault} from "../../src/interfaces/IAssetVault.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract DeployScript is Script {
-    address public constant INITIAL_OWNER_ADDRESS_FOR_PROXY_ADMIN = 0x68e9f64887d634250B4Da6965b6802039Fe89934;
+    address public constant INITIAL_OWNER_ADDRESS_FOR_PROXY_ADMIN = 0x75b38661D59706aD533bA8905502dd19957dc228;
     address public constant DELEGATION_REGISTRY_V2 = 0x00000000000000447e69651d841bD8D104Bed493;
 
     function run() public {
-        vm.createSelectFork("sepolia");
-        vm.startBroadcast(vm.envUint("TESTNET_PRIVATE_KEY"));
+        vm.createSelectFork("mainnet");
+        vm.startBroadcast(vm.envUint("MAINNET_PRIVATE_KEY"));
         Options memory opts;
         address assetVaultImpl = Upgrades.deployImplementation("AssetVault.sol", opts);
         address assetVaultRegistry = Upgrades.deployTransparentProxy(

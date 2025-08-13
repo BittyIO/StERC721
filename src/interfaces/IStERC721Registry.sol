@@ -24,4 +24,9 @@ interface IStERC721Registry {
     function setMintStrategy(address stERC721, address mintStrategy) external;
 
     function setSymbol(address stERC721, string memory symbol) external;
+
+    function addClaimAirdropStrategy(address strategy_) external;
+    function removeClaimAirdropStrategy(address strategy_) external;
+    function addExecuteAirdropStrategy(address strategy_) external;
+    function removeExecuteAirdropStrategy(address strategy_) external;
 }

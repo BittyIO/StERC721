@@ -94,6 +94,8 @@ transactions
       );
       if (target) {
         target.address = tx.contractAddress;
+        // @ts-ignore
+        target.proxyAdmin = tx.additionalContracts[0].address;
       }
     }
   });
