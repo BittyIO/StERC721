@@ -9,12 +9,12 @@
     "proxyAdmin": "0x3b8990577f22c5355937ff65f74b58641e396c03"
   },
   {
-    "contract": "StERC721Registry",
+    "contract": "WrappedERC721Registry",
     "address": "0xeabb3536ba8044499795b08799d30d04ccf439a7",
     "proxyAdmin": "0x02f5b4eaef096bbc2dd2e7fce38bc6589a1929d0"
   },
   {
-    "contract": "StERC721",
+    "contract": "WrappedERC721",
     "address": "0x2df841bb549e04d351caf8320e5408d3d4055abf"
   }
 ]

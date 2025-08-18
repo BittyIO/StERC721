@@ -7,7 +7,7 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IMintStrategy} from "./IMintStrategy.sol";
 
-interface IStERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
+interface IWrappedERC721 is IERC721Metadata, IERC721Receiver, IERC721Enumerable {
     event Minted(address indexed to, uint256[] tokenId);
     event Burned(address indexed from, address indexed to, uint256[] tokenId);
 
