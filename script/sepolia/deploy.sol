@@ -8,9 +8,9 @@ import {Options} from "@openzeppelin-foundry-upgrades/Options.sol";
 
 import {AssetVaultRegistry} from "../../src/AssetVaultRegistry.sol";
 import {IAssetVaultRegistry} from "../../src/interfaces/IAssetVaultRegistry.sol";
-import {StERC721Registry} from "../../src/StERC721Registry.sol";
-import {IStERC721Registry} from "../../src/interfaces/IStERC721Registry.sol";
-import {IStERC721} from "../../src/interfaces/IStERC721.sol";
+import {WrappedERC721Registry} from "../../src/WrappedERC721Registry.sol";
+import {IWrappedERC721Registry} from "../../src/interfaces/IWrappedERC721Registry.sol";
+import {IWrappedERC721} from "../../src/interfaces/IWrappedERC721.sol";
 import {IAssetVault} from "../../src/interfaces/IAssetVault.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -28,17 +28,17 @@ contract DeployScript is Script {
             INITIAL_OWNER_ADDRESS_FOR_PROXY_ADMIN,
             abi.encodeCall(IAssetVaultRegistry.initialize, (assetVaultImpl, DELEGATION_REGISTRY_V2))
         );
-        address stERC721Registry = Upgrades.deployTransparentProxy(
-            "StERC721Registry.sol",
+        address wrappedERC721Registry = Upgrades.deployTransparentProxy(
+            "WrappedERC721Registry.sol",
             INITIAL_OWNER_ADDRESS_FOR_PROXY_ADMIN,
-            abi.encodeCall(IStERC721Registry.initialize, ("eth", IAssetVaultRegistry(assetVaultRegistry)))
+            abi.encodeCall(IWrappedERC721Registry.initialize, ("eth", IAssetVaultRegistry(assetVaultRegistry)))
         );
-        OwnableUpgradeable(assetVaultRegistry).transferOwnership(stERC721Registry);
-        address stERC721Impl = Upgrades.deployImplementation("StERC721.sol", opts);
+        OwnableUpgradeable(assetVaultRegistry).transferOwnership(wrappedERC721Registry);
+        address wrappedERC721Impl = Upgrades.deployImplementation("WrappedERC721.sol", opts);
         vm.stopBroadcast();
         console2.log("assetVaultImpl", assetVaultImpl);
-        console2.log("stERC721Impl", stERC721Impl);
+        console2.log("wrappedERC721Impl", wrappedERC721Impl);
         console2.log("assetVaultRegistry", assetVaultRegistry);
-        console2.log("stERC721Registry", stERC721Registry);
+        console2.log("wrappedERC721Registry", wrappedERC721Registry);
     }
 }

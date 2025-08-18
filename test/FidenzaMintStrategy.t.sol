@@ -105,8 +105,8 @@ contract FidenzaMintStrategyTest is Test {
         assertFalse(isMintable);
     }
 
-    function testMintable_WithStERC721Integration() public {
-        // This test simulates how FidenzaMintStrategy would work with StERC721
+    function testMintable_WithWrappedERC721Integration() public {
+        // This test simulates how FidenzaMintStrategy would work with WrappedERC721
         uint256 fidenzaTokenId = 12345;
         uint256 otherTokenId = 67890;
 
@@ -114,7 +114,7 @@ contract FidenzaMintStrategyTest is Test {
         mockArtBlocks.setTokenIdToProjectId(fidenzaTokenId, FIDENZA_PROJECT_ID);
         mockArtBlocks.setTokenIdToProjectId(otherTokenId, 79);
 
-        // Simulate StERC721 mint logic
+        // Simulate WrappedERC721 mint logic
         bool fidenzaMintable = fidenzaMintStrategy.mintable(artBlocksAddress, fidenzaTokenId);
         bool otherMintable = fidenzaMintStrategy.mintable(artBlocksAddress, otherTokenId);
 

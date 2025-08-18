@@ -14,13 +14,18 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
-import {IStERC721} from "./interfaces/IStERC721.sol";
+import {IWrappedERC721} from "./interfaces/IWrappedERC721.sol";
 import {IAssetVault} from "./interfaces/IAssetVault.sol";
 import {IAssetVaultRegistry} from "./interfaces/IAssetVaultRegistry.sol";
 import {IMintStrategy} from "./interfaces/IMintStrategy.sol";
 import {InvalidERC721, InvalidERC721Owner, InvalidERC721Token} from "./interfaces/IErrors.sol";
 
-contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC721EnumerableUpgradeable {
+contract WrappedERC721 is
+    IWrappedERC721,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC721EnumerableUpgradeable
+{
     using Clones for address;
 
     IMintStrategy public mintStrategy;
@@ -67,7 +72,7 @@ contract StERC721 is IStERC721, OwnableUpgradeable, ReentrancyGuardUpgradeable, 
         override(IERC165, ERC721EnumerableUpgradeable)
         returns (bool)
     {
-        return interfaceId == type(IStERC721).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IWrappedERC721).interfaceId || super.supportsInterface(interfaceId);
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) external view override returns (bytes4) {

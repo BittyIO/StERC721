@@ -164,7 +164,7 @@ contract AssetVaultRegistry is OwnableUpgradeable, IAssetVaultRegistry {
         ownerAssetVault_.unstakeERC721(erc721_, tokenId_);
     }
 
-    // The ERC721 must be transferred in by the StERC721 contract
+    // The ERC721 must be transferred in by the WrappedERC721 contract
     function stakedERC721(address owner_, address erc721_, uint256 tokenId_) external override onlyAuthorized {
         IAssetVault ownerAssetVault_ = _getAssetVault(owner_);
         ownerAssetVault_.stakeERC721(erc721_, tokenId_);
